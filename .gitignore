@@ -1,0 +1,7 @@
+*.obx
+*.xex
+*.lst
+*.a65
+disk/
+*.atr
+*.c
