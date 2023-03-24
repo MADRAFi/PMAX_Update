@@ -4,10 +4,10 @@ program pmax_upd;
 {$librarypath '../Window Library/src'}
 {$librarypath '../PokeyMAX/'}
 
-uses crt, sysutils, misc, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, a8libstr;
+uses crt, sysutils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config;
 
 const
-    version: string = 'PokeyMAX Update v.0.2';
+    version: string = 'PokeyMAX Update v.0.3';
     menu_main: array[0..2] of string = (' PokeyMAX ', ' Config ', ' About ');
     buttons_accept : array[0..1] of string = ('[  OK  ]', '[Cancel]');
 
@@ -61,7 +61,7 @@ const
 var
     win_file: Byte;
     // list_files: array[0..9] of string = ('FILE.XEX', 'FILE2.TXT', 'FILE3.DAT', 'CORE.BIN', 'FILE555.BIN', 'FILE6.BIN', 'FILE77.BIN', 'FILE8.BIN', 'FILE999.BIN', 'FILE101010.BIN');
-    list_files: array[0..128] of string[12];
+    list_files: array[0..128] of string[FILENAME_SIZE];
     count_files: Byte = 0;
     read_drive, selected_drive: Byte;
     read_file: Byte;
@@ -84,7 +84,7 @@ begin
     if FindFirst(Concat(list_drives[selected_drive - 1],'*.BIN'), faAnyFile, info) = 0 then
     // if FindFirst('D:*.BIN', faAnyFile, info) = 0 then
     begin
-        i:= 0;
+        i:= 1; // 0
         repeat
             // s:= ' O ';
             // WOrn(win_file, WPBOT, WPRGT, CHO_L);
@@ -104,7 +104,6 @@ begin
     Result:= false;
     selected_drive:=1;
     selected_list:=1;
-    // selected_file:='            ';
     
     win_file:=WOpen(5, 4, 30, 16, WOFF);
     WOrn(win_file, WPTOP, WPLFT, 'Choose a file');
@@ -118,7 +117,8 @@ begin
         tmp:= Length(selected_file);
         SetLength(selected_file, FILENAME_SIZE);
         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
-    end;
+    end
+    else selected_file:='            ';
     WPrint(win_file, 2, 2, WOFF, 'File:');
     WDiv(win_file, 3, WON);
 
@@ -151,6 +151,11 @@ begin
         if (read_drive <> XESC) then
         begin
             selected_drive := read_drive;
+        end
+        else if (read_drive = XESC) then
+        begin
+            bM:= XESC;
+            break;
         end;
         GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
 
@@ -166,6 +171,11 @@ begin
                 SetLength(selected_file, FILENAME_SIZE);
                 FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
                 WPrint(win_file, 8, 2, WOFF, selected_file);
+            end
+            else if (read_list = XESC) then
+            begin
+                bM:= XESC;
+                break;
             end;
             GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
         end;
@@ -325,9 +335,10 @@ const
     BUTTONS_POSX = 16; BUTTONS_POSY = 16;
     MONO_POSX = 2; MONO_POSY = 3;
     PHI_POSX = 19; PHI_POSY = 3;
-    DIV_POSX = 2; DIV_POSY = 7;
-    GTIA_POSX = 2; GTIA_POSY = 10;
-    OUT_POSX = 2; OUT_POSY = 12;
+    DIV_POSX = 15; DIV_POSY = 8;
+    GTIA_POSX = 23; GTIA_POSY = 8;
+    OUT_POSX = 29; OUT_POSY = 8;
+
 
 var
     win_core: Byte;
@@ -349,30 +360,27 @@ var
 begin
     Result:= false;
     status_close:= 0;
-    // selected_option:= 1;
-    // selected_sid:= GCON;
-    // selected_psg:= GCON;
-    // selected_covox:= GCON;
+    
     selected_mono:=1;
     selected_phi:=1;
 
-    selected_div1:=1;
-    selected_div2:=1;
-    selected_div3:=1;
-    selected_div4:=1;
+    selected_div1:=GCON;
+    selected_div2:=GCON;
+    selected_div3:=GCON;
+    selected_div4:=GCON;
 
-    selected_gtia1:=1;
-    selected_gtia2:=1;
-    selected_gtia3:=1;
-    selected_gtia4:=1;
+    selected_gtia1:=GCON;
+    selected_gtia2:=GCON;
+    selected_gtia3:=GCON;
+    selected_gtia4:=GCON;
 
-    selected_out1:=1;
-    selected_out2:=1;
-    selected_out3:=1;
-    selected_out4:=1;
-    selected_out5:=1;
+    selected_out1:=GCON;
+    selected_out2:=GCON;
+    selected_out3:=GCON;
+    selected_out4:=GCON;
+    selected_out5:=GCON;
 
-    win_core:=WOpen(3, 3, 34, 19, WOFF);
+    win_core:=WOpen(2, 3, 36, 19, WOFF);
     WOrn(win_core, WPTOP, WPLFT, ' CORE ');
     
     WPrint(win_core, MONO_POSX, MONO_POSY - 1, WOFF, 'Mono:');
@@ -380,99 +388,237 @@ begin
 
     WPrint(win_core, PHI_POSX, PHI_POSY - 1, WOFF, 'PHI2->1MHz:');
     GRadio(win_core, PHI_POSX, PHI_POSY, GVERT, GDISP, selected_phi, Length(core_phi), core_phi);
-    // WPrint(win_core, ENABLE_POSX, ENABLE_POSY - 1, WOFF, 'Enable:');
-    // WPrint(win_core, ENABLE_POSX + 4, ENABLE_POSY, WOFF, 'SID');
-    // WPrint(win_core, ENABLE_POSX + 4, ENABLE_POSY + 1, WOFF, 'PSG');
-    // WPrint(win_core, ENABLE_POSX + 4, ENABLE_POSY + 2, WOFF, 'Covox');
+    WDiv(win_core,PHI_POSY + Length(core_phi), WON);
 
-    // GCheck(win_core, ENABLE_POSX, ENABLE_POSY, GDISP, selected_sid);
-    // GCheck(win_core, ENABLE_POSX, ENABLE_POSY + 1, GDISP, selected_psg);
-    // GCheck(win_core, ENABLE_POSX, ENABLE_POSY + 2, GDISP, selected_covox);
+    WPrint(win_core, MONO_POSX , DIV_POSY, WOFF, '1 High L');
+    WPrint(win_core, MONO_POSX , DIV_POSY + 1, WOFF, '2 High R');
+    WPrint(win_core, MONO_POSX , DIV_POSY + 3, WOFF, '3 Low L');
+    WPrint(win_core, MONO_POSX , DIV_POSY + 4, WOFF, '4 Low R');
+    WPrint(win_core, MONO_POSX , DIV_POSY + 6, WOFF, '5 SPDIF');
 
-    WPrint(win_core, DIV_POSX, DIV_POSY - 1, WOFF, 'Divide:');
-    WPrint(win_core, DIV_POSX, DIV_POSY, WOFF, '1:');
-    GCombo(win_core, DIV_POSX + 2, DIV_POSY, GDISP, selected_div1, Length(core_divide), core_divide);
+    WPrint(win_core, DIV_POSX - 2, DIV_POSY - 1, WOFF, 'Divide:');
 
-    WPrint(win_core, DIV_POSX + 8, DIV_POSY, WOFF, '2:');
-    GCombo(win_core, DIV_POSX + 2 + 8, DIV_POSY, GDISP, selected_div2, Length(core_divide), core_divide);
-
-    WPrint(win_core, DIV_POSX + 16, DIV_POSY, WOFF, '3:');
-    GCombo(win_core, DIV_POSX + 2 + 16, DIV_POSY, GDISP, selected_div3, Length(core_divide), core_divide);
-
-    WPrint(win_core, DIV_POSX + 24, DIV_POSY, WOFF, '4:');
-    GCombo(win_core, DIV_POSX + 2 + 24, DIV_POSY, GDISP, selected_div4, Length(core_divide), core_divide);
+    GCombo(win_core, DIV_POSX, DIV_POSY, GDISP, selected_div1, Length(core_divide), core_divide);
+    GCombo(win_core, DIV_POSX, DIV_POSY + 1, GDISP, selected_div2, Length(core_divide), core_divide);
+    GCombo(win_core, DIV_POSX, DIV_POSY + 3, GDISP, selected_div3, Length(core_divide), core_divide);
+    GCombo(win_core, DIV_POSX, DIV_POSY + 4, GDISP, selected_div4, Length(core_divide), core_divide);
 
 
-    WPrint(win_core, GTIA_POSX, GTIA_POSY - 1, WOFF, 'GTIA:');
-    WPrint(win_core, GTIA_POSX, GTIA_POSY, WOFF, '1:');
-
-    WPrint(win_core, GTIA_POSX + 8, GTIA_POSY, WOFF, '2:');
-    WPrint(win_core, GTIA_POSX + 16, GTIA_POSY, WOFF, '3:');
-    WPrint(win_core, GTIA_POSX + 24, GTIA_POSY, WOFF, '4:');
-
-    WPrint(win_core, OUT_POSX, OUT_POSY - 1, WOFF, 'Output:');
-    WPrint(win_core, OUT_POSX, OUT_POSY, WOFF, '1:');
-
-    WPrint(win_core, OUT_POSX + 8, OUT_POSY, WOFF, '2:');
-    WPrint(win_core, OUT_POSX + 16, OUT_POSY, WOFF, '3:');
-    WPrint(win_core, OUT_POSX + 24, OUT_POSY, WOFF, '4:');
-    // WPrint(win_core, GTIA_POSX + 24, GTIA_POSY, WOFF, '4:');
+    WPrint(win_core, GTIA_POSX - 2, GTIA_POSY - 1, WOFF, 'GTIA:');
+    GCheck(win_core, GTIA_POSX, GTIA_POSY, GDISP, selected_gtia1);
+    GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GDISP, selected_gtia2);
+    GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GDISP, selected_gtia3);
+    GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GDISP, selected_gtia4);
+    
+    WPrint(win_core, OUT_POSX - 2, OUT_POSY - 1, WOFF, 'Output:');
+    GCheck(win_core, OUT_POSX, OUT_POSY, GDISP, selected_out1);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 1, GDISP, selected_out2);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 3, GDISP, selected_out3);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 4, GDISP, selected_out4);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP, selected_out5);
 
 
     GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
 
     repeat
 
-        // // // option
-        // read_option:= GRadio(win_core, OPTION_POSX, OPTION_POSY, GVERT, GEDIT, selected_option, Length(core_option), core_option);
-        // if ((read_option <> XESC) and (read_option <> XTAB)) then
-        // begin
-        //     selected_option := read_option;
-        // end;
-        // GRadio(win_core, OPTION_POSX, OPTION_POSY, GVERT, GDISP, selected_option, Length(core_option), core_option);
+        // mono
+        read_mono:= GRadio(win_core, MONO_POSX, MONO_POSY, GVERT, GEDIT, selected_mono, Length(core_mono), core_mono);
+        if ((read_mono <> XESC) and (read_mono <> XTAB)) then
+        begin
+            selected_mono := read_mono;
+        end
+        else if (read_mono = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GRadio(win_core, MONO_POSX, MONO_POSY, GVERT, GDISP, selected_mono, Length(core_mono), core_mono);
 
-        // // enable sid
-        // read_sid:= GCheck(win_core, ENABLE_POSX, ENABLE_POSY, GEDIT, selected_sid);
-        // if ((read_sid <> XESC) and (read_sid <> XTAB)) then
-        // begin
-        //     selected_sid := read_sid;
-        // end;
-        // GCheck(win_core, ENABLE_POSX, ENABLE_POSY, GDISP, selected_sid);
+        // phi
+        read_phi:= GRadio(win_core, PHI_POSX, PHI_POSY, GVERT, GEDIT, selected_phi, Length(core_mono), core_phi);
+        if ((read_phi <> XESC) and (read_phi <> XTAB)) then
+        begin
+            selected_phi := read_phi;
+        end
+        else if (read_phi = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GRadio(win_core, PHI_POSX, PHI_POSY, GVERT, GDISP, selected_PHI, Length(core_phi), core_phi);
 
-        // // enable psg
-        // read_psg:= GCheck(win_core, ENABLE_POSX, ENABLE_POSY + 1, GEDIT, selected_psg);
-        // if ((read_psg <> XESC) and (read_psg <> XTAB)) then
-        // begin
-        //     selected_psg := read_psg;
-        // end;
-        // GCheck(win_core, ENABLE_POSX, ENABLE_POSY + 1, GDISP, selected_psg);
 
-        // // enable covox
-        // read_covox:= GCheck(win_core, ENABLE_POSX, ENABLE_POSY + 2, GEDIT, selected_covox);
-        // if ((read_covox <> XESC) and (read_covox <> XTAB)) then
-        // begin
-        //     selected_covox := read_covox;
-        // end;
-        // GCheck(win_core, ENABLE_POSX, ENABLE_POSY + 2, GDISP, selected_covox);
+        // divider 1
+        read_div1:= GCombo(win_core, DIV_POSX, DIV_POSY, GEDIT, selected_div1, Length(core_divide), core_divide);
+        if ((read_div1 <> XESC) and (read_div1 <> XTAB)) then
+        begin
+            selected_div1 := read_div1;
+        end
+        else if (read_div1 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCombo(win_core, DIV_POSX, DIV_POSY, GDISP, selected_div1, Length(core_divide), core_divide);
 
-        // // envelope
-        // read_envelope:= GRadio(win_core, ENVEL_POSX, ENVEL_POSY, GVERT, GEDIT, selected_envelope, Length(psg_envelope), psg_envelope);
-        // if (read_envelope <> XESC) and (read_envelope <> XTAB) then
-        // // if (read_envelope <> XESC) then
-        // begin
-        //     selected_envelope := read_envelope;
-        // end;
-        // GRadio(win_core, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, selected_envelope, Length(psg_envelope), psg_envelope);
+        // divider 2
+        read_div2:= GCombo(win_core, DIV_POSX, DIV_POSY + 1, GEDIT, selected_div2, Length(core_divide), core_divide);
+        if ((read_div2 <> XESC) and (read_div2 <> XTAB)) then
+        begin
+            selected_div2 := read_div2;
+        end
+        else if (read_div2 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCombo(win_core, DIV_POSX, DIV_POSY + 1, GDISP, selected_div2, Length(core_divide), core_divide);
 
-        // // volume
-        // read_volume:= GRadio(win_core, VOL_POSX, VOL_POSY, GVERT, GEDIT, selected_volume, Length(psg_volume), psg_volume);
-        // if (read_volume <> XESC) and (read_volume <> XTAB) then
-        // // if (read_envelope <> XESC) then
-        // begin
-        //     selected_volume := read_volume;
-        // end;
-        // GRadio(win_core, VOL_POSX, VOL_POSY, GVERT, GDISP, selected_volume, Length(psg_volume), psg_volume);
-        
+        // divider 3
+        read_div3:= GCombo(win_core, DIV_POSX, DIV_POSY + 3, GEDIT, selected_div3, Length(core_divide), core_divide);
+        if ((read_div3 <> XESC) and (read_div3 <> XTAB)) then
+        begin
+            selected_div3 := read_div3;
+        end
+        else if (read_div3 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCombo(win_core, DIV_POSX, DIV_POSY + 3, GDISP, selected_div3, Length(core_divide), core_divide);
+
+        // divider 4
+        read_div4:= GCombo(win_core, DIV_POSX, DIV_POSY + 4, GEDIT, selected_div4, Length(core_divide), core_divide);
+        if ((read_div4 <> XESC) and (read_div4 <> XTAB)) then
+        begin
+            selected_div4 := read_div4;
+        end
+        else if (read_div4 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCombo(win_core, DIV_POSX, DIV_POSY + 4, GDISP, selected_div4, Length(core_divide), core_divide);
+
+
+        // gtia 1
+        read_gtia1:= GCheck(win_core, GTIA_POSX, GTIA_POSY, GEDIT, selected_gtia1);
+        if ((read_gtia1 <> XESC) and (read_gtia1 <> XTAB)) then
+        begin
+            selected_gtia1 := read_gtia1;
+        end
+        else if (read_gtia1 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY, GDISP, selected_gtia1);
+
+        // gtia 2
+        read_gtia2:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GEDIT, selected_gtia2);
+        if ((read_gtia2 <> XESC) and (read_gtia2 <> XTAB)) then
+        begin
+            selected_gtia2 := read_gtia2;
+        end
+        else if (read_gtia2 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GDISP, selected_gtia2);
+
+        // gtia 3
+        read_gtia3:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GEDIT, selected_gtia3);
+        if ((read_gtia3 <> XESC) and (read_gtia3 <> XTAB)) then
+        begin
+            selected_gtia3 := read_gtia3;
+        end
+        else if (read_gtia3 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GDISP, selected_gtia3);
+
+        // gtia 4
+        read_gtia4:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GEDIT, selected_gtia4);
+        if ((read_gtia4 <> XESC) and (read_gtia4 <> XTAB)) then
+        begin
+            selected_gtia4 := read_gtia4;
+        end
+        else if (read_gtia4 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GDISP, selected_gtia4);
+
+        // output 1
+        read_out1:= GCheck(win_core, OUT_POSX, OUT_POSY, GEDIT, selected_out1);
+        if ((read_out1 <> XESC) and (read_out1 <> XTAB)) then
+        begin
+            selected_out1 := read_out1;
+        end
+        else if (read_out1 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, OUT_POSX, OUT_POSY, GDISP, selected_out1);
+
+        // output 2
+        read_out2:= GCheck(win_core, OUT_POSX, OUT_POSY + 1, GEDIT, selected_out2);
+        if ((read_out2 <> XESC) and (read_out2 <> XTAB)) then
+        begin
+            selected_out2 := read_out2;
+        end
+        else if (read_out2 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, GTIA_POSX, OUT_POSY + 1, GDISP, selected_out2);
+
+        // output 3
+        read_out3:= GCheck(win_core, OUT_POSX, OUT_POSY + 3, GEDIT, selected_out3);
+        if ((read_out3 <> XESC) and (read_out3 <> XTAB)) then
+        begin
+            selected_out3 := read_out3;
+        end
+        else if (read_out3 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, GTIA_POSX, OUT_POSY + 3, GDISP, selected_out3);
+
+        // output 4
+        read_out4:= GCheck(win_core, OUT_POSX, OUT_POSY + 4, GEDIT, selected_out4);
+        if ((read_out4 <> XESC) and (read_out4 <> XTAB)) then
+        begin
+            selected_out4 := read_out4;
+        end
+        else if (read_out4 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, OUT_POSX, OUT_POSY + 4, GDISP, selected_out4);
+
+        // output 5
+        read_out5:= GCheck(win_core, OUT_POSX, OUT_POSY + 6, GEDIT, selected_out5);
+        if ((read_out5 <> XESC) and (read_out5 <> XTAB)) then
+        begin
+            selected_out5 := read_out5;
+        end
+        else if (read_out5 = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+        GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP, selected_out5);
+
         // Buttons to confirm
         status_close := GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
         GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
@@ -671,13 +817,13 @@ const
     psg_freq: array[0..2] of string = ('2 MHz', '1 MHz', 'PHI2');
     psg_stereo: array[0..3] of string = ('Mono   (L:ABC R:ABC)', 'Polish (L:AB  R:BC )', 'Czech  (L:AC  R:BC )', 'L / R  (L:111 R:222)');
     psg_envelope: array[0..1] of string = ('16 steps', '32 steps');
-    psg_volume: array[0..1] of string = ('Linear', 'Log');
+    psg_volume: array[0..3] of string = ('Linear', 'Log 0', 'Log 1', 'Log 2');
 
     BUTTONS_POSX = 12; BUTTONS_POSY = 16;
     STEREO_POSX = 2; STEREO_POSY = 2;
     FREQ_POSX = 2; FREQ_POSY = 8;
-    ENVEL_POSX = 15; ENVEL_POSY = 8;
-    VOL_POSX = 2; VOL_POSY = 13;
+    ENVEL_POSX = 2; ENVEL_POSY = 13;
+    VOL_POSX = 15; VOL_POSY = 8;
 
 begin
     Result:= false;
@@ -701,7 +847,7 @@ begin
     GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, selected_envelope, Length(psg_envelope), psg_envelope);
 
     WPrint(win_psg, VOL_POSX, VOL_POSY - 1, WOFF, 'Volume:');
-    GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, selected_volume, Length(psg_envelope), psg_volume);
+    GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, selected_volume, Length(psg_volume), psg_volume);
 
 
     GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
@@ -901,7 +1047,7 @@ end;
 
 begin
     WInit;
-    WBack(3);
+    WBack($2e);
     status_end:= false;
     selected_menu:= 1;
 
@@ -912,7 +1058,11 @@ begin
     {$ELSE}
     pMAX_present:= PMAX_Detect;
     {$ENDIF}
-    if pMAX_present then PMAX_EnableConfig(true);
+    if pMAX_present then 
+    begin
+        PMAX_EnableConfig(true);
+        PMAX_ReadConfig;
+    end;
 
     win_details:=WOpen(0, 18, 40, 5, WOFF);
     WOrn(win_details, WPTOP, WPLFT, 'Details');
