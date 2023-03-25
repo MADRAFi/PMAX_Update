@@ -7,7 +7,7 @@ program pmax_upd;
 uses crt, sysutils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config;
 
 const
-    version: string = 'PokeyMAX Update v.0.3';
+    version: string = 'PokeyMAX Update v.0.4';
     menu_main: array[0..2] of string = (' PokeyMAX ', ' Config ', ' About ');
     buttons_accept : array[0..1] of string = ('[  OK  ]', '[Cancel]');
 
@@ -231,10 +231,10 @@ var
 begin
     Result:= false;
     status_close:= 0;
-    selected_option:= 1;
-    selected_sid:= GCON;
-    selected_psg:= GCON;
-    selected_covox:= GCON;
+    selected_option:= pmax_config.mode_option;
+    selected_sid:= Byte(pmax_config.mode_sid);
+    selected_psg:= Byte(pmax_config.mode_psg);
+    selected_covox:= Byte(pmax_config.mode_covox);
 
     win_mode:=WOpen(8, 3, 24, 10, WOFF);
     WOrn(win_mode, WPTOP, WPLFT, ' MODE ');
@@ -361,24 +361,24 @@ begin
     Result:= false;
     status_close:= 0;
     
-    selected_mono:=1;
-    selected_phi:=1;
+    selected_mono:=pmax_config.core_mono;
+    selected_phi:=pmax_config.core_phi;
 
-    selected_div1:=GCON;
-    selected_div2:=GCON;
-    selected_div3:=GCON;
-    selected_div4:=GCON;
+    selected_div1:=pmax_config.core_div1;
+    selected_div2:=pmax_config.core_div2;
+    selected_div3:=pmax_config.core_div3;
+    selected_div4:=pmax_config.core_div4;
 
-    selected_gtia1:=GCON;
-    selected_gtia2:=GCON;
-    selected_gtia3:=GCON;
-    selected_gtia4:=GCON;
+    selected_gtia1:=Byte(pmax_config.core_gtia1);
+    selected_gtia2:=Byte(pmax_config.core_gtia2);
+    selected_gtia3:=Byte(pmax_config.core_gtia3);
+    selected_gtia4:=Byte(pmax_config.core_gtia4);
 
-    selected_out1:=GCON;
-    selected_out2:=GCON;
-    selected_out3:=GCON;
-    selected_out4:=GCON;
-    selected_out5:=GCON;
+    selected_out1:=Byte(pmax_config.core_out1);
+    selected_out2:=Byte(pmax_config.core_out2);
+    selected_out3:=Byte(pmax_config.core_out3);
+    selected_out4:=Byte(pmax_config.core_out4);
+    selected_out5:=Byte(pmax_config.core_out5);
 
     win_core:=WOpen(2, 3, 36, 19, WOFF);
     WOrn(win_core, WPTOP, WPLFT, ' CORE ');
@@ -654,9 +654,9 @@ const
 begin
     Result:= false;
     status_close:= 0;
-    selected_mixing:= 1;
-    selected_channel:= 1;
-    selected_irq:= 1;
+    selected_mixing:= pmax_config.pokey_mixing;
+    selected_channel:= pmax_config.pokey_channel;
+    selected_irq:= pmax_config.pokey_irq;
     
     win_pokey:=WOpen(5, 4, 31, 13, WOFF);
     WOrn(win_pokey, WPTOP, WPLFT, ' POKEY ');
@@ -747,8 +747,8 @@ const
 begin
     Result:= false;
     status_close:= 0;
-    selected_sid1:= 1;
-    selected_sid2:= 1;
+    selected_sid1:= pmax_config.sid_1;
+    selected_sid2:= pmax_config.sid_2;
     
     win_sid:=WOpen(5, 5, 30, 10, WOFF);
     WOrn(win_sid, WPTOP, WPLFT, ' SID ');
@@ -828,10 +828,10 @@ const
 begin
     Result:= false;
     status_close:= 0;
-    selected_freq:= 1;
-    selected_stereo:= 1;
-    selected_envelope:= 1;
-    selected_volume:= 1;
+    selected_freq:= pmax_config.psg_freq;
+    selected_stereo:= pmax_config.psg_stereo;
+    selected_envelope:= pmax_config.psg_envelope;
+    selected_volume:= pmax_config.psg_volume;
 
     win_psg:=WOpen(5, 3, 30, 19, WOFF);
     WOrn(win_psg, WPTOP, WPLFT, ' PSG ');
@@ -990,12 +990,12 @@ begin
                     status_close:= true;
                     menu_pokey;
                 end;
-            4: if pMAX_present then
+            4: if (pMAX_present and PMAX_isSIDPresent) then
                 begin
                     status_close:= true;
                     menu_sid;
                 end;
-            5: if pMAX_present then
+            5: if (pMAX_present and PMAX_isPSGPresent) then
                 begin
                     status_close:= true;
                     menu_psg;
