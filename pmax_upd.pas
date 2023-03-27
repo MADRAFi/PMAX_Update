@@ -10,7 +10,7 @@ const
     version: string = 'PokeyMAX Update v.0.4';
     menu_main: array[0..2] of string = (' PokeyMAX ', ' Config ', ' About ');
     buttons_accept : array[0..1] of string = ('[  OK  ]', '[Cancel]');
-
+    string_confirm = 'Are you sure?';
 var
     win_main, win_details: Byte;
     selected_menu: Byte;
@@ -31,15 +31,14 @@ var
     win_about: Byte;
 
 begin
-    win_about:=WOpen(5, 5, 30, 12, WOFF);
+    win_about:=WOpen(4, 5, 31, 12, WOFF);
     WOrn(win_about, WPTOP, WPLFT, 'About');
     WPrint(win_about, WPCNT, 2, WOFF, version);
     WPrint(win_about, WPCNT, 4, WOFF, '(c) 2023 MADRAFi');
-    WPrint(win_about, WPCNT, 5, WOFF, 'Flash code by Foft');
-    WPrint(win_about, WPCNT, 6, WOFF, 'Developped using');
-    WPrint(win_about, WPCNT, 7, WOFF, 'MAD-Pascal and');
-    WPrint(win_about, WPCNT, 8, WOFF, 'Windows Library');
-    WPrint(win_about, WPCNT, 10, WON, '[  OK  ]');
+    WPrint(win_about, WPCNT, 5, WOFF, 'Based on flash code by Foft');
+    WPrint(win_about, WPCNT, 6, WOFF, 'Developped using MAD-Pascal');
+    WPrint(win_about, WPCNT, 7, WOFF, 'and Windows Library');
+    WPrint(win_about, WPCNT, 9, WON, '[  OK  ]');
 
     WaitKCX(WOFF);
     WClose(win_about);
@@ -319,7 +318,11 @@ begin
     if status_close = 1 then
     begin
         Result:=true;
-        GAlert('Processing...');
+        if GConfirm(string_confirm) then
+        begin
+            
+            
+        end;
     end;
 
     WClose(win_mode);
@@ -628,7 +631,11 @@ begin
     if status_close = 1 then
     begin
         Result:=true;
-        GAlert('Processing...');
+        if GConfirm(string_confirm) then
+        begin
+            
+            
+        end;
     end;
 
     WClose(win_core);
@@ -724,7 +731,11 @@ begin
     if status_close = 1 then
     begin
         Result:=true;
-        GAlert('Processing...');
+        if GConfirm(string_confirm) then
+        begin
+        
+            
+        end;
     end;
 
     WClose(win_pokey);
@@ -738,7 +749,7 @@ var
     status_close: Byte;
 
 const  
-    sid_options: array[0..2] of string = ('8580', '6581', '8580 Digi');
+    sid_options: array[0..2] of string = ('6581', '8580', '8580 Digi');
 
     BUTTONS_POSX = 12; BUTTONS_POSY = 7;
     SID1_POSX = 2; SID1_POSY = 3;
@@ -800,7 +811,11 @@ begin
     if status_close = 1 then
     begin
         Result:=true;
-        GAlert('Processing...');
+        if GConfirm(string_confirm) then
+        begin
+            PMAX_SetSID_1(pmax_config.sid_1);
+            PMAX_SetSID_2(pmax_config.sid_2);
+        end;
     end;
 
     WClose(win_sid);
@@ -810,44 +825,44 @@ function menu_psg: Boolean;
 var
     win_psg: Byte;
     read_freq, read_stereo, read_envelope, read_volume: Byte;
-    selected_freq, selected_stereo, selected_envelope, selected_volume: Byte;
+    // selected_freq, selected_stereo, selected_envelope, selected_volume: Byte;
     status_close: Byte;
 
 const  
     psg_freq: array[0..2] of string = ('2 MHz', '1 MHz', 'PHI2');
     psg_stereo: array[0..3] of string = ('Mono   (L:ABC R:ABC)', 'Polish (L:AB  R:BC )', 'Czech  (L:AC  R:BC )', 'L / R  (L:111 R:222)');
-    psg_envelope: array[0..1] of string = ('16 steps', '32 steps');
-    psg_volume: array[0..3] of string = ('Linear', 'Log 0', 'Log 1', 'Log 2');
+    psg_envelope: array[0..1] of string = ('32 steps', '16 steps');
+    psg_volume: array[0..3] of string = ('YM2149 Log 1', 'AY Log', 'YM2149 Log 2', 'Linear');
 
     BUTTONS_POSX = 12; BUTTONS_POSY = 16;
     STEREO_POSX = 2; STEREO_POSY = 2;
     FREQ_POSX = 2; FREQ_POSY = 8;
     ENVEL_POSX = 2; ENVEL_POSY = 13;
-    VOL_POSX = 15; VOL_POSY = 8;
+    VOL_POSX = 14; VOL_POSY = 8;
 
 begin
     Result:= false;
     status_close:= 0;
-    selected_freq:= pmax_config.psg_freq;
-    selected_stereo:= pmax_config.psg_stereo;
-    selected_envelope:= pmax_config.psg_envelope;
-    selected_volume:= pmax_config.psg_volume;
+    // selected_freq:= pmax_config.psg_freq;
+    // selected_stereo:= pmax_config.psg_stereo;
+    // selected_envelope:= pmax_config.psg_envelope;
+    // selected_volume:= pmax_config.psg_volume;
 
-    win_psg:=WOpen(5, 3, 30, 19, WOFF);
+    win_psg:=WOpen(3, 3, 32, 19, WOFF);
     WOrn(win_psg, WPTOP, WPLFT, ' PSG ');
     
 
     WPrint(win_psg, STEREO_POSX, STEREO_POSY - 1, WOFF, 'Stereo:');
-    GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, selected_stereo, Length(psg_stereo), psg_stereo);
+    GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
 
     WPrint(win_psg, FREQ_POSX, FREQ_POSY - 1, WOFF, 'Frequency:');
-    GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, selected_freq, Length(psg_freq), psg_freq);
+    GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, pmax_config.psg_freq, Length(psg_freq), psg_freq);
 
     WPrint(win_psg, ENVEL_POSX, ENVEL_POSY - 1, WOFF, 'Envelope:');
-    GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, selected_envelope, Length(psg_envelope), psg_envelope);
+    GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
 
     WPrint(win_psg, VOL_POSX, VOL_POSY - 1, WOFF, 'Volume:');
-    GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, selected_volume, Length(psg_volume), psg_volume);
+    GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, pmax_config.psg_volume, Length(psg_volume), psg_volume);
 
 
     GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
@@ -855,56 +870,56 @@ begin
     repeat
 
         // stereo
-        read_stereo:= GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GEDIT, selected_stereo, Length(psg_stereo), psg_stereo);
+        read_stereo:= GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GEDIT, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
         if ((read_stereo <> XESC) and (read_stereo <> XTAB)) then
         begin
-            selected_stereo := read_stereo;
+            pmax_config.psg_stereo := read_stereo;
         end
         else if (read_stereo = XESC) then
         begin
             status_close:= XESC;
             break;
         end;
-        GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, selected_stereo, Length(psg_stereo), psg_stereo);
+        GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
 
         // freq
-        read_freq:= GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GEDIT, selected_freq, Length(psg_freq), psg_freq);
+        read_freq:= GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GEDIT, pmax_config.psg_freq, Length(psg_freq), psg_freq);
         if ((read_freq <> XESC) and (read_freq <> XTAB)) then
         begin
-            selected_freq := read_freq;
+            pmax_config.psg_freq := read_freq;
         end
         else if (read_freq = XESC) then
         begin
             status_close:= XESC;
             break;
         end;
-        GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, selected_freq, Length(psg_freq), psg_freq);
+        GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, pmax_config.psg_freq, Length(psg_freq), psg_freq);
 
         // envelope
-        read_envelope:= GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GEDIT, selected_envelope, Length(psg_envelope), psg_envelope);
+        read_envelope:= GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GEDIT, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
         if ((read_envelope <> XESC) and (read_envelope <> XTAB)) then
         begin
-            selected_envelope := read_envelope;
+            pmax_config.psg_envelope := read_envelope;
         end
         else if (read_envelope = XESC) then
         begin
             status_close:= XESC;
             break;
         end;
-        GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, selected_envelope, Length(psg_envelope), psg_envelope);
+        GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
 
         // volume
-        read_volume:= GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GEDIT, selected_volume, Length(psg_volume), psg_volume);
+        read_volume:= GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GEDIT, pmax_config.psg_volume, Length(psg_volume), psg_volume);
         if ((read_volume <> XESC) and (read_volume <> XTAB)) then
         begin
-            selected_volume := read_volume;
+            pmax_config.psg_volume := read_volume;
         end
         else if (read_volume = XESC) then
         begin
             status_close:= XESC;
             break;
         end;
-        GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, selected_volume, Length(psg_volume), psg_volume);
+        GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, pmax_config.psg_volume, Length(psg_volume), psg_volume);
         
         // Buttons to confirm
         status_close := GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
@@ -915,7 +930,13 @@ begin
     if status_close = 1 then
     begin
         Result:=true;
-        GAlert('Processing...');
+        if GConfirm(string_confirm) then
+        begin
+            PMAX_SetPSG_Stereo(pmax_config.psg_stereo);
+            PMAX_SetPSG_Freq(pmax_config.psg_freq);
+            PMAX_SetPSG_Envelope(pmax_config.psg_envelope);
+            PMAX_SetPSG_Volume(pmax_config.psg_volume);
+        end;
     end;
 
     WClose(win_psg);
@@ -1014,7 +1035,7 @@ begin
 
     if pMAX_present then
     begin
-        case PMAX_GetPokey of
+        case PMAX_GetPokeys of
             1: s_pokey:='Mono';
             2: s_pokey:='Stereo';
             4: s_pokey:='Quad';
@@ -1050,6 +1071,34 @@ begin
     WBack($2e);
     status_end:= false;
     selected_menu:= 1;
+    pmax_config.mode_option:= 3; // mono
+    pmax_config.mode_sid:= false;
+    pmax_config.mode_psg:= false;
+    pmax_config.mode_covox:= false;
+    pmax_config.core_mono:= 1;
+    pmax_config.core_phi:= 1;
+    pmax_config.core_div1:= 1;
+    pmax_config.core_div2:= 1;
+    pmax_config.core_div3:= 1;
+    pmax_config.core_div4:= 1;
+    pmax_config.core_gtia1:= false;
+    pmax_config.core_gtia2:= false;
+    pmax_config.core_gtia3:= false;
+    pmax_config.core_gtia4:= false;
+    pmax_config.core_out1:= false;
+    pmax_config.core_out2:= false;
+    pmax_config.core_out3:= false;
+    pmax_config.core_out4:= false;
+    pmax_config.core_out5:= false;
+    pmax_config.pokey_mixing:= 1;
+    pmax_config.pokey_channel:= 1;
+    pmax_config.pokey_irq:= 1;
+    pmax_config.psg_freq:= 1;
+    pmax_config.psg_stereo:= 1;
+    pmax_config.psg_envelope:= 1;
+    pmax_config.psg_volume:= 1;
+    pmax_config.sid_1:= 1;
+    pmax_config.sid_2:= 1;
 
     win_main:=WOpen(0, 0, 40, 3, WOFF);
     WOrn(win_main, WPTOP, WPCNT, version);
