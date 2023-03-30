@@ -9,7 +9,7 @@ program pmax_upd;
 uses crt, sysutils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config;
 
 const
-    version: string = 'PokeyMAX Update v.0.6';
+    version: string = 'PokeyMAX Update v.0.7';
 
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -30,13 +30,11 @@ const
     buttons_accept : array[0..1] of string = ('[  OK  ]', '[Cancel]');
     string_confirm = 'Are you sure?';
 
-// {$r resources.rc}               // including resource files
-// {$i const.inc}
-
 var
     win_main, win_details: Byte;
     selected_menu: Byte;
     status_end: Boolean;
+    status_close: Byte;
     pMAX_present: Boolean = false;
     read_input: Byte;
 
@@ -47,16 +45,16 @@ begin
 end;
 
 
-procedure remember_input(input: byte);
+procedure remember_input(remember: PByte);
 begin
     if ((read_input <> XESC) and (read_input <> XTAB)) then
     begin
-        input := read_input;
+        remember^ := read_input;
     end
     else if (read_input = XESC) then
     begin
         status_close:= XESC;
-        break;
+        // break;
     end;    
 end;
 
@@ -101,7 +99,7 @@ var
     selected_file: String[FILENAME_SIZE];
     selected_list: Byte;
     // read_drive, read_list: Byte;
-    bM: Byte;
+    
     tmp, i: Byte;    
 
 procedure read_dir;
@@ -187,9 +185,10 @@ begin
         end
         else if (read_input = XESC) then
         begin
-            bM:= XESC;
+            status_close:= XESC;
             break;
         end;
+        
         GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
 
         // Files List
@@ -207,19 +206,20 @@ begin
             end
             else if (read_input = XESC) then
             begin
-                bM:= XESC;
+                status_close:= XESC;
                 break;
             end;
+            
             GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
         end;
 
         // Buttons to confirm
-        bM := GButton(win_file, 19, 11, GVERT, GEDIT, 2, buttons);    
+        status_close := GButton(win_file, 19, 11, GVERT, GEDIT, 2, buttons);    
         GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
 
-    until bM <> XTAB;
+    until status_close <> XTAB;
 
-    if bM = 1 then
+    if status_close = 1 then
     begin
         Result:=true;
         GAlert(Concat(Concat('Processing...', list_drives[selected_drive - 1]), selected_file));
@@ -232,6 +232,7 @@ end;
 procedure menu_reboot;
 begin
     if pMAX_present then PMAX_EnableConfig(false);
+    Poke(580, 1);
     // asm {
 	// 	;lda:cmp:req 20
 	// 	sei
@@ -253,93 +254,102 @@ const
 var
     win_mode: Byte;
 
-    selected_sid, selected_psg, selected_covox: Byte;
+    // selected_sid, selected_psg, selected_covox: Byte;
     // read_sid, read_psg, read_covox: Byte;
 
     selected_option: Byte;
     // read_option: Byte;
 
-    status_close: Byte;
+    // status_close: Byte;
 
 begin
     Result:= false;
     status_close:= 0;
-    selected_option:= pmax_config.mode_pokey;
-    selected_sid:= Byte(pmax_config.mode_sid);
-    selected_psg:= Byte(pmax_config.mode_psg);
-    selected_covox:= Byte(pmax_config.mode_covox);
+    // selected_option:= pmax_config.mode_pokey;
+    // selected_sid:= Byte(pmax_config.mode_sid);
+    // selected_psg:= Byte(pmax_config.mode_psg);
+    // selected_covox:= Byte(pmax_config.mode_covox);
 
     win_mode:=WOpen(8, 3, 24, 10, WOFF);
     WOrn(win_mode, WPTOP, WPLFT, ' MODE ');
     
 
     WPrint(win_mode, OPTION_POSX, OPTION_POSY - 1, WOFF, 'Option:');
-    GRadio(win_mode, OPTION_POSX, OPTION_POSY, GVERT, GDISP, selected_option, Length(core_option), core_option);
+    GRadio(win_mode, OPTION_POSX, OPTION_POSY, GVERT, GDISP, pmax_config.mode_pokey, Length(core_option), core_option);
 
     WPrint(win_mode, ENABLE_POSX, ENABLE_POSY - 1, WOFF, 'Enable:');
     WPrint(win_mode, ENABLE_POSX + 4, ENABLE_POSY, WOFF, 'SID');
     WPrint(win_mode, ENABLE_POSX + 4, ENABLE_POSY + 1, WOFF, 'PSG');
     WPrint(win_mode, ENABLE_POSX + 4, ENABLE_POSY + 2, WOFF, 'Covox');
 
-    GCheck(win_mode, ENABLE_POSX, ENABLE_POSY, GDISP, selected_sid);
-    GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 1, GDISP, selected_psg);
-    GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 2, GDISP, selected_covox);
+    GCheck(win_mode, ENABLE_POSX, ENABLE_POSY, GDISP, pmax_config.mode_sid);
+    GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 1, GDISP, pmax_config.mode_psg);
+    GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 2, GDISP, pmax_config.mode_covox);
 
     GButton(win_mode, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
 
     repeat
 
         // // option
-        read_input:= GRadio(win_mode, OPTION_POSX, OPTION_POSY, GVERT, GEDIT, selected_option, Length(core_option), core_option);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            selected_option := read_input;
-        end
-        else if (read_input = XESC) then 
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GRadio(win_mode, OPTION_POSX, OPTION_POSY, GVERT, GDISP, selected_option, Length(core_option), core_option);
-
+        read_input:= GRadio(win_mode, OPTION_POSX, OPTION_POSY, GVERT, GEDIT, pmax_config.mode_pokey, Length(core_option), core_option);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.mode_pokey := read_input;
+        // end
+        // else if (read_input = XESC) then 
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.mode_pokey);
+        if status_close = XESC then break;
+        
+        GRadio(win_mode, OPTION_POSX, OPTION_POSY, GVERT, GDISP, pmax_config.mode_pokey, Length(core_option), core_option);
+        
         // enable sid
-        read_input:= GCheck(win_mode, ENABLE_POSX, ENABLE_POSY, GEDIT, selected_sid);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            selected_sid := read_input;
-        end
-        else if (read_input = XESC) then 
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_mode, ENABLE_POSX, ENABLE_POSY, GDISP, selected_sid);
+        read_input:= GCheck(win_mode, ENABLE_POSX, ENABLE_POSY, GEDIT, pmax_config.mode_sid);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.mode_sid := read_input;
+        // end
+        // else if (read_input = XESC) then 
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.mode_sid);
+        if status_close = XESC then break;
+        GCheck(win_mode, ENABLE_POSX, ENABLE_POSY, GDISP, pmax_config.mode_sid);
 
         // enable psg
-        read_input:= GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 1, GEDIT, selected_psg);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            selected_psg := read_input;
-        end
-        else if (read_input = XESC) then 
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 1, GDISP, selected_psg);
+        read_input:= GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 1, GEDIT, pmax_config.mode_psg);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.mode_psg := read_input;
+        // end
+        // else if (read_input = XESC) then 
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.mode_psg);
+        if status_close = XESC then break;
+        GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 1, GDISP, pmax_config.mode_psg);
 
         // enable covox
-        read_input:= GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 2, GEDIT, selected_covox);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            selected_covox := read_input;
-        end
-        else if (read_input = XESC) then 
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 2, GDISP, selected_covox);
+        read_input:= GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 2, GEDIT, pmax_config.mode_covox);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.mode_covox := read_input;
+        // end
+        // else if (read_input = XESC) then 
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.mode_covox);
+        if status_close = XESC then break;
+        GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 2, GDISP, pmax_config.mode_covox);
  
         // Buttons to confirm
         // if status_close <> XESC then
@@ -392,7 +402,7 @@ var
     // selected_mono, selected_phi: Byte;
     // read_mono, read_phi: Byte;
 
-    status_close: Byte;
+    // status_close: Byte;
 
 begin
     Result:= false;
@@ -442,17 +452,17 @@ begin
 
 
     WPrint(win_core, GTIA_POSX - 2, GTIA_POSY - 1, WOFF, 'GTIA:');
-    GCheck(win_core, GTIA_POSX, GTIA_POSY, GDISP, Byte(pmax_config.core_gtia1));
-    GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GDISP, Byte(pmax_config.core_gtia2));
-    GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GDISP, Byte(pmax_config.core_gtia3));
-    GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GDISP, Byte(pmax_config.core_gtia4));
+    GCheck(win_core, GTIA_POSX, GTIA_POSY, GDISP, pmax_config.core_gtia1);
+    GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GDISP, pmax_config.core_gtia2);
+    GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GDISP, pmax_config.core_gtia3);
+    GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GDISP,  pmax_config.core_gtia4);
     
     WPrint(win_core, OUT_POSX - 2, OUT_POSY - 1, WOFF, 'Output:');
-    GCheck(win_core, OUT_POSX, OUT_POSY, GDISP, Byte(pmax_config.core_out1));
-    GCheck(win_core, OUT_POSX, OUT_POSY + 1, GDISP, Byte(pmax_config.core_out2));
-    GCheck(win_core, OUT_POSX, OUT_POSY + 3, GDISP, Byte(pmax_config.core_out3));
-    GCheck(win_core, OUT_POSX, OUT_POSY + 4, GDISP, Byte(pmax_config.core_out4));
-    GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP, Byte(pmax_config.core_out5));
+    GCheck(win_core, OUT_POSX, OUT_POSY, GDISP,  pmax_config.core_out1);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 1, GDISP,  pmax_config.core_out2);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 3, GDISP,  pmax_config.core_out3);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 4, GDISP,  pmax_config.core_out4);
+    GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP,  pmax_config.core_out5);
 
 
     GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
@@ -461,200 +471,230 @@ begin
 
         // mono
         read_input:= GRadio(win_core, MONO_POSX, MONO_POSY, GVERT, GEDIT, pmax_config.mode_mono, Length(core_mono), core_mono);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.mode_mono := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.mode_mono := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.mode_mono);
+        if status_close = XESC then break;
         GRadio(win_core, MONO_POSX, MONO_POSY, GVERT, GDISP, pmax_config.mode_mono, Length(core_mono), core_mono);
 
         // phi
         read_input:= GRadio(win_core, PHI_POSX, PHI_POSY, GVERT, GEDIT, pmax_config.mode_phi, Length(core_phi), core_phi);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.mode_phi := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.mode_phi := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.mode_phi);
+        if status_close = XESC then break;
         GRadio(win_core, PHI_POSX, PHI_POSY, GVERT, GDISP, pmax_config.mode_phi, Length(core_phi), core_phi);
 
 
         // divider 1
         read_input:= GCombo(win_core, DIV_POSX, DIV_POSY, GEDIT, pmax_config.core_div1, Length(core_divide), core_divide);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_div1 := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_div1 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_div1);
+        if status_close = XESC then break;
         GCombo(win_core, DIV_POSX, DIV_POSY, GDISP, pmax_config.core_div1, Length(core_divide), core_divide);
 
         // divider 2
         read_input:= GCombo(win_core, DIV_POSX, DIV_POSY + 1, GEDIT, pmax_config.core_div2, Length(core_divide), core_divide);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_div2 := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_div2 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_div2);
+        if status_close = XESC then break;
         GCombo(win_core, DIV_POSX, DIV_POSY + 1, GDISP, pmax_config.core_div2, Length(core_divide), core_divide);
 
         // divider 3
         read_input:= GCombo(win_core, DIV_POSX, DIV_POSY + 3, GEDIT, pmax_config.core_div3, Length(core_divide), core_divide);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_div3 := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_div3 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_div3);
+        if status_close = XESC then break;
         GCombo(win_core, DIV_POSX, DIV_POSY + 3, GDISP, pmax_config.core_div3, Length(core_divide), core_divide);
 
         // divider 4
         read_input:= GCombo(win_core, DIV_POSX, DIV_POSY + 4, GEDIT, pmax_config.core_div4, Length(core_divide), core_divide);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_div4 := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_div4 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_div4);
+        if status_close = XESC then break;
         GCombo(win_core, DIV_POSX, DIV_POSY + 4, GDISP, pmax_config.core_div4, Length(core_divide), core_divide);
 
 
         // gtia 1
-        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY, GEDIT, Byte(pmax_config.core_gtia1));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_gtia1 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, GTIA_POSX, GTIA_POSY, GDISP, Byte(pmax_config.core_gtia1));
+        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY, GEDIT, pmax_config.core_gtia1);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_gtia1 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_gtia1);
+        if status_close = XESC then break;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY, GDISP, pmax_config.core_gtia1);
 
         // gtia 2
-        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GEDIT, Byte(pmax_config.core_gtia2));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_gtia2 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GDISP, Byte(pmax_config.core_gtia2));
+        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GEDIT, pmax_config.core_gtia2);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_gtia2 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_gtia2);
+        if status_close = XESC then break;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY + 1, GDISP, pmax_config.core_gtia2);
 
         // gtia 3
-        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GEDIT, Byte(pmax_config.core_gtia3));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_gtia3 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GDISP, Byte(pmax_config.core_gtia3));
+        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GEDIT, pmax_config.core_gtia3);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_gtia3 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_gtia3);
+        if status_close = XESC then break;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY + 3, GDISP, pmax_config.core_gtia3);
 
         // gtia 4
-        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GEDIT, Byte(pmax_config.core_gtia4));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_gtia4 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GDISP, Byte(pmax_config.core_gtia4));
+        read_input:= GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GEDIT, pmax_config.core_gtia4);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_gtia4 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_gtia4);
+        if status_close = XESC then break;
+        GCheck(win_core, GTIA_POSX, GTIA_POSY + 4, GDISP, pmax_config.core_gtia4);
 
         // output 1
-        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY, GEDIT, Byte(pmax_config.core_out1));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_out1 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, OUT_POSX, OUT_POSY, GDISP, Byte(pmax_config.core_out1));
+        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY, GEDIT, pmax_config.core_out1);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_out1 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_out1);
+        if status_close = XESC then break;
+        GCheck(win_core, OUT_POSX, OUT_POSY, GDISP, pmax_config.core_out1);
 
         // output 2
-        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 1, GEDIT, Byte(pmax_config.core_out2));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_out2 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, GTIA_POSX, OUT_POSY + 1, GDISP, Byte(pmax_config.core_out2));
+        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 1, GEDIT, pmax_config.core_out2);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_out2 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_out2);
+        if status_close = XESC then break;
+        GCheck(win_core, GTIA_POSX, OUT_POSY + 1, GDISP, pmax_config.core_out2);
 
         // output 3
-        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 3, GEDIT, Byte(pmax_config.core_out3));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_out3 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, GTIA_POSX, OUT_POSY + 3, GDISP, Byte(pmax_config.core_out3));
+        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 3, GEDIT, pmax_config.core_out3);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_out3 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_out3);
+        if status_close = XESC then break;
+        GCheck(win_core, GTIA_POSX, OUT_POSY + 3, GDISP, pmax_config.core_out3);
 
         // output 4
-        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 4, GEDIT, Byte(pmax_config.core_out4));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_out4 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, OUT_POSX, OUT_POSY + 4, GDISP, Byte(pmax_config.core_out4));
+        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 4, GEDIT, pmax_config.core_out4);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_out4 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_out4);
+        if status_close = XESC then break;
+        GCheck(win_core, OUT_POSX, OUT_POSY + 4, GDISP, pmax_config.core_out4);
 
         // output 5
-        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 6, GEDIT, Byte(pmax_config.core_out5));
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.core_out5 := Boolean(read_input);
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
-        GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP, Byte(pmax_config.core_out5));
+        read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 6, GEDIT, pmax_config.core_out5);
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.core_out5 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.core_out5);
+        if status_close = XESC then break;
+        GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP, pmax_config.core_out5);
 
         // Buttons to confirm
         status_close := GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
@@ -684,7 +724,7 @@ var
     win_pokey: Byte;
     // read_mixing, read_channel, read_irq: Byte;
     // selected_mixing, selected_channel, selected_irq: Byte;
-    status_close: Byte;
+    // status_close: Byte;
 
 const  
     pokey_mixing: array[0..1] of string = ('Non-linear', 'Linear');
@@ -722,41 +762,47 @@ begin
 
         // mixing
         read_input:= GRadio(win_pokey, MIXING_POSX, MIXING_POSY, GVERT, GEDIT, pmax_config.pokey_mixing, Length(pokey_mixing), pokey_mixing);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.pokey_mixing := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.pokey_mixing := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.pokey_mixing);
+        if status_close = XESC then break;
         GRadio(win_pokey, MIXING_POSX, MIXING_POSY, GVERT, GDISP, pmax_config.pokey_mixing, Length(pokey_mixing), pokey_mixing);
 
         // channel
         read_input:= GRadio(win_pokey, CHANNEL_POSX, CHANNEL_POSY, GVERT, GEDIT, pmax_config.pokey_channel, Length(pokey_channel), pokey_channel);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.pokey_channel := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.pokey_channel := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.pokey_channel);
+        if status_close = XESC then break;
         GRadio(win_pokey, CHANNEL_POSX, CHANNEL_POSY, GVERT, GDISP, pmax_config.pokey_channel, Length(pokey_channel), pokey_channel);
 
         // irq
         read_input:= GRadio(win_pokey, IRQ_POSX, IRQ_POSY, GVERT, GEDIT, pmax_config.pokey_irq, Length(pokey_irq), pokey_irq);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.pokey_irq := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.pokey_irq := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.pokey_irq);
+        if status_close = XESC then break;
         GRadio(win_pokey, IRQ_POSX, IRQ_POSY, GVERT, GDISP, pmax_config.pokey_irq, Length(pokey_irq), pokey_irq);
 
 
@@ -789,7 +835,7 @@ var
     win_sid: Byte;
     // read_sid1, read_sid2: Byte;
     // selected_sid1, selected_sid2: Byte;
-    status_close: Byte;
+    // status_close: Byte;
 
 const  
     sid_options: array[0..2] of string = ('6581', '8580', '8580 Digi');
@@ -821,28 +867,32 @@ begin
 
         // sid 1
         read_input:= GRadio(win_sid, SID1_POSX, SID1_POSY, GVERT, GEDIT, pmax_config.sid_1, Length(sid_options), sid_options);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.sid_1 := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.sid_1 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.sid_1);
+        if status_close = XESC then break;
         GRadio(win_sid, SID1_POSX, SID1_POSY, GVERT, GDISP, pmax_config.sid_1, Length(sid_options), sid_options);
 
         // sid 2
         read_input:= GRadio(win_sid, SID2_POSX, SID2_POSY, GVERT, GEDIT, pmax_config.sid_2, Length(sid_options), sid_options);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.sid_2 := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.sid_2 := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.sid_2);
+        if status_close = XESC then break;
         GRadio(win_sid, SID2_POSX, SID2_POSY, GVERT, GDISP, pmax_config.sid_2, Length(sid_options), sid_options);
 
         // Buttons to confirm
@@ -873,7 +923,7 @@ var
     win_psg: Byte;
     // read_freq, read_stereo, read_envelope, read_volume: Byte;
     // selected_freq, selected_stereo, selected_envelope, selected_volume: Byte;
-    status_close: Byte;
+    // status_close: Byte;
 
 const  
     psg_freq: array[0..2] of string = ('2 MHz', '1 MHz', 'PHI2');
@@ -918,54 +968,62 @@ begin
 
         // stereo
         read_input:= GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GEDIT, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.psg_stereo := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.psg_stereo := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.psg_stereo);
+        if status_close = XESC then break;
         GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
 
         // freq
         read_input:= GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GEDIT, pmax_config.psg_freq, Length(psg_freq), psg_freq);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.psg_freq := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.psg_freq := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.psg_freq);
+        if status_close = XESC then break;
         GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, pmax_config.psg_freq, Length(psg_freq), psg_freq);
 
         // envelope
         read_input:= GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GEDIT, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.psg_envelope := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.psg_envelope := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.psg_envelope);
+        if status_close = XESC then break;
         GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
 
         // volume
         read_input:= GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GEDIT, pmax_config.psg_volume, Length(psg_volume), psg_volume);
-        if ((read_input <> XESC) and (read_input <> XTAB)) then
-        begin
-            pmax_config.psg_volume := read_input;
-        end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
-        end;
+        // if ((read_input <> XESC) and (read_input <> XTAB)) then
+        // begin
+        //     pmax_config.psg_volume := read_input;
+        // end
+        // else if (read_input = XESC) then
+        // begin
+        //     status_close:= XESC;
+        //     break;
+        // end;
+        remember_input(@pmax_config.psg_volume);
+        if status_close = XESC then break;
         GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, pmax_config.psg_volume, Length(psg_volume), psg_volume);
         
         // Buttons to confirm
@@ -998,32 +1056,32 @@ procedure menu_pokeymax;
 var
     win_pokeymax: Byte;
     selected: Byte;
-    status_close: Boolean;
+    // status_close: Boolean;
 const
-    menu: array[0..2] of string = (' Flash  ', ' Reboot ', ' Exit   ');
+    menu_pmax: array[0..2] of string = (' Flash  ', ' Reboot ', ' Exit   ');
 
 begin
-    status_close:= false;
+    status_close:= 0;
     selected:= 1;
     win_pokeymax:=WOpen(1, 3, 10, 5, WOFF);
 
-    while not status_close do
+    while status_close<>XESC do
     begin
-        selected:=MenuV(win_pokeymax, 1, 1, WOFF, selected, Length(menu), menu);
+        selected:=WMenu(win_pokeymax, 1, 1, GVERT, WOFF, selected, Length(menu_pmax), menu_pmax);
         case selected of
             1: begin
                     if pMAX_present then
                     begin
-                        status_close:= true;
+                        status_close:= XESC;
                         menu_file;  // menu_flash
                     end;
                end;
             2: menu_reboot;
             3: begin
                     status_end:= true;
-                    status_close:= true;
+                    status_close:= XESC;
                end;
-            XESC: status_close:= true;
+            XESC: status_close:= XESC;
         end;
     end;
     WClose(win_pokeymax);
@@ -1033,46 +1091,46 @@ procedure menu_config;
 var
     win_config: Byte;
     selected: Byte;
-    status_close: Boolean;
+    // status_close: Boolean;
 const
-    menu: array[0..4] of string = (' Mode   ', ' CORE   ', ' Pokey  ', ' SID    ', ' PSG    ');
+    menu_cfg: array[0..4] of string = (' Mode   ', ' CORE   ', ' Pokey  ', ' SID    ', ' PSG    ');
 
 begin
     selected:= 1;
-    status_close:= false;
+    status_close:= 0;
 
     win_config:=WOpen(12, 2, 10, 7, WOFF);
 
-    while not status_close do
+    while status_close<>XESC do
     begin
-        selected:=MenuV(win_config, 1, 1, WOFF, selected, Length(menu), menu);
+        selected:=WMenu(win_config, 1, 1, GVERT, WOFF, selected, Length(menu_cfg), menu_cfg);
         case selected of
             1: if pMAX_present then
                 begin
-                    status_close:= true;
+                    status_close:= XESC;
                     menu_mode;
                 end;        
             2: if pMAX_present then
                 begin
-                    status_close:= true;
+                    status_close:= XESC;
                     menu_core;
                 end;
             3: if pMAX_present then
                 begin
-                    status_close:= true;
+                    status_close:= XESC;
                     menu_pokey;
                 end;
             4: if (pMAX_present and PMAX_isSIDPresent) then
                 begin
-                    status_close:= true;
+                    status_close:= XESC;
                     menu_sid;
                 end;
             5: if (pMAX_present and PMAX_isPSGPresent) then
                 begin
-                    status_close:= true;
+                    status_close:= XESC;
                     menu_psg;
                 end;
-            XESC: status_close:= true;
+            XESC: status_close:= XESC;
         end;
     end;
     WClose(win_config);
@@ -1124,24 +1182,24 @@ begin
     status_end:= false;
     selected_menu:= 1;
     pmax_config.mode_pokey:= 1;
-    pmax_config.mode_sid:= false;
-    pmax_config.mode_psg:= false;
-    pmax_config.mode_covox:= false;
+    pmax_config.mode_sid:= 0;
+    pmax_config.mode_psg:= 0;
+    pmax_config.mode_covox:= 0;
     pmax_config.mode_mono:= 1;
     pmax_config.mode_phi:= 1;
     pmax_config.core_div1:= 1;
     pmax_config.core_div2:= 1;
     pmax_config.core_div3:= 1;
     pmax_config.core_div4:= 1;
-    pmax_config.core_gtia1:= false;
-    pmax_config.core_gtia2:= false;
-    pmax_config.core_gtia3:= false;
-    pmax_config.core_gtia4:= false;
-    pmax_config.core_out1:= false;
-    pmax_config.core_out2:= false;
-    pmax_config.core_out3:= false;
-    pmax_config.core_out4:= false;
-    pmax_config.core_out5:= false;
+    pmax_config.core_gtia1:= 0;
+    pmax_config.core_gtia2:= 0;
+    pmax_config.core_gtia3:= 0;
+    pmax_config.core_gtia4:= 0;
+    pmax_config.core_out1:= 0;
+    pmax_config.core_out2:= 0;
+    pmax_config.core_out3:= 0;
+    pmax_config.core_out4:= 0;
+    pmax_config.core_out5:= 0;
     pmax_config.pokey_mixing:= 1;
     pmax_config.pokey_channel:= 1;
     pmax_config.pokey_irq:= 1;
@@ -1172,7 +1230,7 @@ begin
     begin
         details;
 
-        selected_menu:=MenuH(win_main, 1, 1, WON, selected_menu, Length(menu_main), menu_main);
+        selected_menu:=WMenu(win_main, 1, 1, GHORZ, WON, selected_menu, Length(menu_main), menu_main);
         case selected_menu of
             1: menu_pokeymax;
             2: menu_config;
@@ -1186,4 +1244,7 @@ begin
     if pMAX_present then PMAX_EnableConfig(false);
     WClose(win_details);
     WClose(win_main);
+    asm {
+        jmp $a
+    };
 end.
