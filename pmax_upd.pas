@@ -9,7 +9,7 @@ program pmax_upd;
 uses crt, sysutils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    version: string = 'PokeyMAX Update v.0.7';
+    version: string = 'PokeyMAX Update v.0.8';
 
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -27,7 +27,7 @@ const
     );
     
     menu_main: array[0..2] of string = (' PokeyMAX ', ' Config ', ' About ');
-    buttons_accept : array[0..1] of string = ('[  OK  ]', '[Cancel]');
+    str_buttons_accept : array[0..1] of string = ('[  OK  ]', '[Cancel]');
     string_confirm = 'Are you sure?';
 
 var
@@ -65,9 +65,9 @@ end;
 procedure FlashSaveConfig;
 begin
     win_progress:=WOpen(9, 10, 22, 7, WOFF);
-    WOrn(win_progress, WPTOP, WPCNT, 'Progress');
+    WOrn(win_progress, WPTOP, 2, 'Progress');
     GProg(win_progress, 1, 2, 0);
-    WPrint(win_progress, WPCNT, 3, WOFF, 'Backing up');
+    WPrint(win_progress, 2, 3, WOFF, 'Backing up');
     pagesize:= PMAX_GetPageSize;
     GetMem(buffer, pagesize * 4);
     for i:= 2 to i < pagesize do
@@ -78,11 +78,13 @@ begin
     PMAX_WriteProtect(false);
     // reset variable for failed attempts
     read_input:=0;
-    WDiv(win_progress, 3, $20);
-    WPrint(win_progress, WPCNT, 3, WOFF, 'Erasing page');
-    PMAX_ErasePage(0);
-    WDiv(win_progress, 3, $20);
-    WPrint(win_progress, WPCNT, 3, WOFF, 'Writing');
+    // WDiv(win_progress, 3, $20);
+    // WPrint(win_progress, 2, 3, WOFF, 'Erasing page');
+    WPrint(win_progress, 2, 3, WOFF, 'Erasing page        ');
+    // PMAX_ErasePage(0);
+    // WDiv(win_progress, 3, $20);
+    // WPrint(win_progress, 2, 3, WOFF, 'Writing');
+    WPrint(win_progress, 2, 3, WOFF, 'Writing             ');
     PMAX_FetchFlashAddress; // fetch value to flash1 and flash2 variables; 
     buffer[0]:= flash1;
     buffer[1]:= flash1;
@@ -91,28 +93,31 @@ begin
         GProg(win_progress, 1, 2, pagesize div i);
         PMAX_WriteFlash(i, 0, buffer[i]);
     end;
-    WDiv(win_progress, 3, $20);
-    WPrint(win_progress, WPCNT, 3, WOFF, 'Verifying');
+    // WDiv(win_progress, 3, $20);
+    // WPrint(win_progress, 2, 3, WOFF, 'Verifying');
+    WPrint(win_progress, 2, 3, WOFF, 'Verifying           ');
     for i:=0 to i < pagesize do
     begin
         GProg(win_progress, 1, 2, pagesize div i);
         val:=PMAX_ReadFlash(i, 0);
         if val <> buffer[i] then
         begin
-            WDiv(win_progress, 3, $20);
-            WPrint(win_progress, WPCNT, 3, WOFF, 'Failed at');
-            WPrint(win_progress, 12, 1, WOFF, ByteToStr(i));
+            // WDiv(win_progress, 3, $20);
+            // WPrint(win_progress, 2, 3, WOFF, 'Failed at page');
+            WPrint(win_progress, 2, 3, WOFF, 'Failed at page      ');
+            WPrint(win_progress, 17, 3, WOFF, ByteToStr(i));
             read_input:=1;
             break;
         end;
     end;
     if read_input = 0 then
     begin
-        WDiv(win_progress, 3, $20);
-        WPrint(win_progress, WPCNT, 3, WOFF, 'Completed');
+        // WDiv(win_progress, 3, $20);
+        // WPrint(win_progress, 2, 3, WOFF, 'Completed');
+        WPrint(win_progress, 2, 3, WOFF, 'Completed           ');
     end;
     PMAX_WriteProtect(true);
-    GProg(win_progress, 1, 2, 100);
+    FreeMem(buffer, pagesize * 4);
     WPrint(win_progress, WPCNT, 5, WON, '[  OK  ]');
     read_input:= WaitKCX(WOFF);
     WClose(win_progress);
@@ -212,7 +217,7 @@ begin
     end
     else selected_file:='            ';
     WPrint(win_file, 2, 2, WOFF, 'File:');
-    WDiv(win_file, 3, WON);
+    // WDiv(win_file, 3, WON);
 
     WPrint(win_file, 21, 4, WOFF, 'Drive:');
     GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
@@ -333,7 +338,6 @@ begin
 
     win_mode:=WOpen(8, 3, 24, 10, WOFF);
     WOrn(win_mode, WPTOP, WPLFT, ' MODE ');
-    Worn(win_mode, WPBOT, WPRGT, ByteToStr(PMAX_GetREST_Covox));
 
     WPrint(win_mode, OPTION_POSX, OPTION_POSY - 1, WOFF, 'Option:');
     GRadio(win_mode, OPTION_POSX, OPTION_POSY, GVERT, GDISP, pmax_config.mode_pokey, Length(core_option), core_option);
@@ -347,7 +351,7 @@ begin
     GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 1, GDISP, pmax_config.mode_psg);
     GCheck(win_mode, ENABLE_POSX, ENABLE_POSY + 2, GDISP, pmax_config.mode_covox);
 
-    GButton(win_mode, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+    GButton(win_mode, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     repeat
 
@@ -379,21 +383,21 @@ begin
         // Buttons to confirm
         // if status_close <> XESC then
         // begin
-            status_close := GButton(win_mode, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
-            GButton(win_mode, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+            status_close := GButton(win_mode, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, str_buttons_accept);    
+            GButton(win_mode, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
         // end;
     until status_close <> XTAB;
 
     if status_close = 1 then
     begin
         Result:=true;
-        PMAX_SetREST_Pokey(pmax_config.mode_pokey);
-        PMAX_SetREST_Sid(pmax_config.mode_sid);
-        PMAX_SetREST_Psg(pmax_config.mode_psg);
-        PMAX_SetREST_Covox(pmax_config.mode_covox);
         if GConfirm(string_confirm) then
         begin
-            FlashSaveConfig;
+            PMAX_WriteConfig;
+            if PMAX_isFlashPresent then
+            begin
+                FlashSaveConfig;
+            end;
         end;
     end;
 
@@ -463,7 +467,6 @@ begin
 
     WPrint(win_core, PHI_POSX, PHI_POSY - 1, WOFF, 'PHI2->1MHz:');
     GRadio(win_core, PHI_POSX, PHI_POSY, GVERT, GDISP, pmax_config.mode_phi, Length(core_phi), core_phi);
-    // WDiv(win_core,PHI_POSY + Length(core_phi), WON);
 
     WPrint(win_core, MONO_POSX , DIV_POSY, WOFF, '1 High L');
     WPrint(win_core, MONO_POSX , DIV_POSY + 1, WOFF, '2 High R');
@@ -493,7 +496,7 @@ begin
     GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP,  pmax_config.core_out5);
 
 
-    GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+    GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     repeat
 
@@ -590,8 +593,8 @@ begin
         GCheck(win_core, OUT_POSX, OUT_POSY + 6, GDISP, pmax_config.core_out5);
 
         // Buttons to confirm
-        status_close := GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
-        GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+        status_close := GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, str_buttons_accept);    
+        GButton(win_core, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     until status_close <> XTAB;
 
@@ -600,21 +603,7 @@ begin
         Result:=true;
         if GConfirm(string_confirm) then
         begin
-            PMAX_SetMODE_Mono(pmax_config.mode_mono);
-            PMAX_SetMODE_PHI(pmax_config.mode_phi);
-            PMAX_SetDIV_Ch0(pmax_config.core_div1);
-            PMAX_SetDIV_Ch1(pmax_config.core_div2);
-            PMAX_SetDIV_Ch2(pmax_config.core_div3);
-            PMAX_SetDIV_Ch3(pmax_config.core_div4);
-            PMAX_SetGTIA_Ch0(pmax_config.core_gtia1);
-            PMAX_SetGTIA_Ch1(pmax_config.core_gtia2);
-            PMAX_SetGTIA_Ch2(pmax_config.core_gtia3);
-            PMAX_SetGTIA_Ch3(pmax_config.core_gtia4);
-            PMAX_SetOUT_Ch0(pmax_config.core_out1);
-            PMAX_SetOUT_Ch1(pmax_config.core_out2);
-            PMAX_SetOUT_Ch2(pmax_config.core_out3);
-            PMAX_SetOUT_Ch3(pmax_config.core_out4);
-            PMAX_SetOUT_Ch4(pmax_config.core_out5);
+            PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
                 FlashSaveConfig;
@@ -662,7 +651,7 @@ begin
     WPrint(win_pokey, IRQ_POSX, IRQ_POSY - 1, WOFF, 'IRQ:');
     GRadio(win_pokey, IRQ_POSX, IRQ_POSY, GVERT, GDISP, pmax_config.pokey_irq, Length(pokey_irq), pokey_irq);
 
-    GButton(win_pokey, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+    GButton(win_pokey, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     repeat
 
@@ -686,8 +675,8 @@ begin
 
 
         // Buttons to confirm
-        status_close := GButton(win_pokey, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
-        GButton(win_pokey, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+        status_close := GButton(win_pokey, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, str_buttons_accept);    
+        GButton(win_pokey, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     until status_close <> XTAB;
 
@@ -696,9 +685,7 @@ begin
         Result:=true;
         if GConfirm(string_confirm) then
         begin
-            PMAX_SetMODE_Mixing(pmax_config.pokey_mixing);
-            PMAX_SetMODE_Channel(pmax_config.pokey_channel);
-            PMAX_SetMODE_IRQ(pmax_config.pokey_irq);
+            PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
                 FlashSaveConfig;
@@ -740,7 +727,7 @@ begin
     GRadio(win_sid, SID2_POSX, SID2_POSY, GVERT, GDISP, pmax_config.sid_2, Length(sid_options), sid_options);
 
 
-    GButton(win_sid, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+    GButton(win_sid, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     repeat
 
@@ -757,8 +744,8 @@ begin
         GRadio(win_sid, SID2_POSX, SID2_POSY, GVERT, GDISP, pmax_config.sid_2, Length(sid_options), sid_options);
 
         // Buttons to confirm
-        status_close := GButton(win_sid, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
-        GButton(win_sid, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+        status_close := GButton(win_sid, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, str_buttons_accept);    
+        GButton(win_sid, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     until status_close <> XTAB;
 
@@ -767,8 +754,7 @@ begin
         Result:=true;
         if GConfirm(string_confirm) then
         begin
-            PMAX_SetSID_1(pmax_config.sid_1);
-            PMAX_SetSID_2(pmax_config.sid_2);
+            PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
                 FlashSaveConfig;
@@ -787,10 +773,10 @@ var
     // status_close: Byte;
 
 const  
-    psg_freq: array[0..2] of string = ('2 MHz', '1 MHz', 'PHI2');
-    psg_stereo: array[0..3] of string = ('Mono   (L:ABC R:ABC)', 'Polish (L:AB  R:BC )', 'Czech  (L:AC  R:BC )', 'L / R  (L:111 R:222)');
-    psg_envelope: array[0..1] of string = ('32 steps', '16 steps');
-    psg_volume: array[0..3] of string = ('AY Log', 'YM2149 Log 1', 'YM2149 Log 2', 'Linear');
+    str_psg_freq: array[0..2] of string = ('2 MHz', '1 MHz', 'PHI2');
+    str_psg_stereo: array[0..3] of string = ('Mono   (L:ABC R:ABC)', 'Polish (L:AB  R:BC )', 'Czech  (L:AC  R:BC )', 'L / R  (L:111 R:222)');
+    str_psg_envelope: array[0..1] of string = ('32 steps', '16 steps');
+    str_psg_volume: array[0..3] of string = ('AY Log', 'YM2149 Log 1', 'YM2149 Log 2', 'Linear');
 
     BUTTONS_POSX = 12; BUTTONS_POSY = 16;
     STEREO_POSX = 2; STEREO_POSY = 2;
@@ -811,49 +797,49 @@ begin
     
 
     WPrint(win_psg, STEREO_POSX, STEREO_POSY - 1, WOFF, 'Stereo:');
-    GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
+    GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, pmax_config.psg_stereo, Length(str_psg_stereo), str_psg_stereo);
 
     WPrint(win_psg, FREQ_POSX, FREQ_POSY - 1, WOFF, 'Frequency:');
-    GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, pmax_config.psg_freq, Length(psg_freq), psg_freq);
+    GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, pmax_config.psg_freq, Length(str_psg_freq), str_psg_freq);
 
     WPrint(win_psg, ENVEL_POSX, ENVEL_POSY - 1, WOFF, 'Envelope:');
-    GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
+    GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, pmax_config.psg_envelope, Length(str_psg_envelope), str_psg_envelope);
 
     WPrint(win_psg, VOL_POSX, VOL_POSY - 1, WOFF, 'Volume:');
-    GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, pmax_config.psg_volume, Length(psg_volume), psg_volume);
+    GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, pmax_config.psg_volume, Length(str_psg_volume), str_psg_volume);
 
 
-    GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+    GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     repeat
 
         // stereo
-        read_input:= GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GEDIT, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
+        read_input:= GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GEDIT, pmax_config.psg_stereo, Length(str_psg_stereo), str_psg_stereo);
         remember_input(pmax_config.psg_stereo);
         if status_close = XESC then break;
-        GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, pmax_config.psg_stereo, Length(psg_stereo), psg_stereo);
+        GRadio(win_psg, STEREO_POSX, STEREO_POSY, GVERT, GDISP, pmax_config.psg_stereo, Length(str_psg_stereo), str_psg_stereo);
 
         // freq
-        read_input:= GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GEDIT, pmax_config.psg_freq, Length(psg_freq), psg_freq);
+        read_input:= GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GEDIT, pmax_config.psg_freq, Length(str_psg_freq), str_psg_freq);
         remember_input(pmax_config.psg_freq);
         if status_close = XESC then break;
-        GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, pmax_config.psg_freq, Length(psg_freq), psg_freq);
+        GRadio(win_psg, FREQ_POSX, FREQ_POSY, GVERT, GDISP, pmax_config.psg_freq, Length(str_psg_freq), str_psg_freq);
 
         // envelope
-        read_input:= GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GEDIT, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
+        read_input:= GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GEDIT, pmax_config.psg_envelope, Length(str_psg_envelope), str_psg_envelope);
         remember_input(pmax_config.psg_envelope);
         if status_close = XESC then break;
-        GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, pmax_config.psg_envelope, Length(psg_envelope), psg_envelope);
+        GRadio(win_psg, ENVEL_POSX, ENVEL_POSY, GVERT, GDISP, pmax_config.psg_envelope, Length(str_psg_envelope), str_psg_envelope);
 
         // volume
-        read_input:= GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GEDIT, pmax_config.psg_volume, Length(psg_volume), psg_volume);
+        read_input:= GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GEDIT, pmax_config.psg_volume, Length(str_psg_volume), str_psg_volume);
         remember_input(pmax_config.psg_volume);
         if status_close = XESC then break;
-        GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, pmax_config.psg_volume, Length(psg_volume), psg_volume);
+        GRadio(win_psg, VOL_POSX, VOL_POSY, GVERT, GDISP, pmax_config.psg_volume, Length(str_psg_volume), str_psg_volume);
         
         // Buttons to confirm
-        status_close := GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, buttons_accept);    
-        GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, buttons_accept);
+        status_close := GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GEDIT, 2, str_buttons_accept);    
+        GButton(win_psg, BUTTONS_POSX, BUTTONS_POSY, GHORZ, GDISP, 2, str_buttons_accept);
 
     until status_close <> XTAB;
 
@@ -862,10 +848,7 @@ begin
         Result:=true;
         if GConfirm(string_confirm) then
         begin
-            PMAX_SetPSG_Stereo(pmax_config.psg_stereo);
-            PMAX_SetPSG_Freq(pmax_config.psg_freq);
-            PMAX_SetPSG_Envelope(pmax_config.psg_envelope);
-            PMAX_SetPSG_Volume(pmax_config.psg_volume);
+            PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
                 FlashSaveConfig;
