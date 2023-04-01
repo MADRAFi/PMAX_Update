@@ -9,7 +9,7 @@ program pmax_upd;
 uses crt, sysutils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    version: string = 'PokeyMAX Update v.0.8';
+    version: string = 'PokeyMAX Update v.0.10';
 
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -37,7 +37,7 @@ var
     status_close: Byte;                         // flag to indicate current window will close
     pMAX_present: Boolean = false;              // Set to true if PokeyMax is present
     read_input: Byte;                           // Contains value of selected option in the window or pressed key
-    pagesize: Word;                             // flash page size
+    // pagesize: Word;                             // flash page size
     buffer: PWord;                              // flash buffer
     val: LongWord;
     i:  Byte;
@@ -68,42 +68,33 @@ begin
     WOrn(win_progress, WPTOP, 2, 'Progress');
     GProg(win_progress, 1, 2, 0);
     WPrint(win_progress, 2, 3, WOFF, 'Backing up');
-    pagesize:= PMAX_GetPageSize;
-    GetMem(buffer, pagesize * 4);
-    for i:= 2 to i < pagesize do
+    GetMem(buffer, pmax_config.pagesize * 4);
+    for i:= 2 to i < pmax_config.pagesize do
     begin
-        GProg(win_progress, 1, 2, pagesize div i);
+        GProg(win_progress, 1, 2, pmax_config.pagesize div i);
         buffer[i]:=PMAX_ReadFlash(i, 0);
     end;
     PMAX_WriteProtect(false);
     // reset variable for failed attempts
     read_input:=0;
-    // WDiv(win_progress, 3, $20);
-    // WPrint(win_progress, 2, 3, WOFF, 'Erasing page');
     WPrint(win_progress, 2, 3, WOFF, 'Erasing page        ');
-    // PMAX_ErasePage(0);
-    // WDiv(win_progress, 3, $20);
-    // WPrint(win_progress, 2, 3, WOFF, 'Writing');
+    PMAX_ErasePage(0);
     WPrint(win_progress, 2, 3, WOFF, 'Writing             ');
     PMAX_FetchFlashAddress; // fetch value to flash1 and flash2 variables; 
     buffer[0]:= flash1;
-    buffer[1]:= flash1;
-    for i:=0 to i < pagesize do
+    buffer[1]:= flash2;
+    for i:=0 to i < pmax_config.pagesize do
     begin
-        GProg(win_progress, 1, 2, pagesize div i);
+        GProg(win_progress, 1, 2, pmax_config.pagesize div i);
         PMAX_WriteFlash(i, 0, buffer[i]);
     end;
-    // WDiv(win_progress, 3, $20);
-    // WPrint(win_progress, 2, 3, WOFF, 'Verifying');
     WPrint(win_progress, 2, 3, WOFF, 'Verifying           ');
-    for i:=0 to i < pagesize do
+    for i:=0 to i < pmax_config.pagesize do
     begin
-        GProg(win_progress, 1, 2, pagesize div i);
+        GProg(win_progress, 1, 2, pmax_config.pagesize div i);
         val:=PMAX_ReadFlash(i, 0);
         if val <> buffer[i] then
         begin
-            // WDiv(win_progress, 3, $20);
-            // WPrint(win_progress, 2, 3, WOFF, 'Failed at page');
             WPrint(win_progress, 2, 3, WOFF, 'Failed at page      ');
             WPrint(win_progress, 17, 3, WOFF, ByteToStr(i));
             read_input:=1;
@@ -112,17 +103,22 @@ begin
     end;
     if read_input = 0 then
     begin
-        // WDiv(win_progress, 3, $20);
-        // WPrint(win_progress, 2, 3, WOFF, 'Completed');
         WPrint(win_progress, 2, 3, WOFF, 'Completed           ');
     end;
     PMAX_WriteProtect(true);
-    FreeMem(buffer, pagesize * 4);
+    FreeMem(buffer, pmax_config.pagesize * 4);
     WPrint(win_progress, WPCNT, 5, WON, '[  OK  ]');
     read_input:= WaitKCX(WOFF);
     WClose(win_progress);
 end;
 
+// procedure UpdateCore(filename: String[12]);
+// begin
+//   flash1:= PMAX_ReadFlash(0, 0);
+//   flash2:= PMAX_ReadFlash(1, 0);
+
+  
+// end;
 
 procedure menu_about;
 var
@@ -222,26 +218,26 @@ begin
     WPrint(win_file, 21, 4, WOFF, 'Drive:');
     GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
     
-    WPrint(win_file, 2, 4, WOFF, 'List:');
-    if count_files > 0 then 
-        GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+    // WPrint(win_file, 2, 4, WOFF, 'List:');
+    // if count_files > 0 then 
+    //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
 
     GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
     
     repeat
         // file
         read_input:= GInput(win_file, 8, 2, GFILE, 12, selected_file);
-        if (read_input <> XESC) and (count_files > 0) then
-        begin
-            for i:=0 to count_files - 1 do
-            begin
-                if list_files[i] = Trim(selected_file) then
-                begin
-                    selected_list:= i + 1;
-                    GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-                end;
-            end; 
-        end;
+        // if (read_input <> XESC) and (count_files > 0) then
+        // begin
+        //     for i:=0 to count_files - 1 do
+        //     begin
+        //         if list_files[i] = Trim(selected_file) then
+        //         begin
+        //             selected_list:= i + 1;
+        //             GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+        //         end;
+        //     end; 
+        // end;
 
         // Drives combo
         read_input:= GCombo(win_file, 21, 5, GEDIT, selected_drive, 8, list_drives);
@@ -258,26 +254,26 @@ begin
         GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
 
         // Files List
-        if (count_files > 0) then 
-        begin
-            read_input:= GList(win_file, 2, 5, GEDIT, selected_list, 8, count_files, list_files);
-            if (read_input <> XESC) then
-            begin
-                selected_list := read_input;
-                selected_file:= list_files[selected_list - 1];
-                tmp:= Length(selected_file);
-                SetLength(selected_file, FILENAME_SIZE);
-                FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
-                WPrint(win_file, 8, 2, WOFF, selected_file);
-            end
-            else if (read_input = XESC) then
-            begin
-                status_close:= XESC;
-                break;
-            end;
+        // if (count_files > 0) then 
+        // begin
+        //     read_input:= GList(win_file, 2, 5, GEDIT, selected_list, 8, count_files, list_files);
+        //     if (read_input <> XESC) then
+        //     begin
+        //         selected_list := read_input;
+        //         selected_file:= list_files[selected_list - 1];
+        //         tmp:= Length(selected_file);
+        //         SetLength(selected_file, FILENAME_SIZE);
+        //         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
+        //         WPrint(win_file, 8, 2, WOFF, selected_file);
+        //     end
+        //     else if (read_input = XESC) then
+        //     begin
+        //         status_close:= XESC;
+        //         break;
+        //     end;
             
-            GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-        end;
+        //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+        // end;
 
         // Buttons to confirm
         status_close := GButton(win_file, 19, 11, GVERT, GEDIT, 2, buttons);    
@@ -966,7 +962,7 @@ begin
         WPrint(win_details, 16, 2, WOFF, 'PSG:');
         WPrint(win_details, 16, 3, WOFF, 'Covox:');
 
-        WPrint(win_details, 30, 3, WOFF, 'Sample:');
+        WPrint(win_details, 28, 3, WOFF, 'Sample:');
 
         WPrint(win_details, 7, 1, WOFF, PMAX_GetCoreVersion);
         WPrint(win_details, 8, 2, WOFF, s_pokey);
@@ -976,7 +972,7 @@ begin
         WPrint(win_details, 23, 2, WOFF, convert_bool(PMAX_isPSGPresent));
         WPrint(win_details, 23, 3, WOFF, convert_bool(PMAX_isCovoxPresent));
 
-        WPrint(win_details, 38, 3, WOFF, convert_bool(PMAX_isSamplePresent));
+        WPrint(win_details, 36, 3, WOFF, convert_bool(PMAX_isSamplePresent));
     end
     else begin
         WPrint(win_details, WPCNT, 2, WON, ' PokeyMAX not found. ');
@@ -1029,6 +1025,7 @@ begin
     begin
         PMAX_EnableConfig(true);
         PMAX_ReadConfig;
+        PMAX_ReadFlashType;
     end;
 
     win_details:=WOpen(0, 18, 40, 5, WOFF);
