@@ -1,7 +1,7 @@
 program pmax_upd;
 
 
-{$librarypath '../Window Library/src'}
+{$librarypath '../Window_Library/src'}
 {$librarypath '../PokeyMAX/'}
 
 {$DEFINE BASICOFF}
@@ -9,7 +9,7 @@ program pmax_upd;
 uses crt, sysutils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    version: string = 'PokeyMAX Update v.0.10';
+    version: string = 'PokeyMAX Update v.0.12';
 
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -35,12 +35,11 @@ var
     selected_menu: Byte;                        // which menu is current
     status_end: Boolean;                        // flag to indicate application is going to close
     status_close: Byte;                         // flag to indicate current window will close
-    pMAX_present: Boolean = false;              // Set to true if PokeyMax is present
+    PMAX_present: Boolean = false;              // Set to true if PokeyMax is present
     read_input: Byte;                           // Contains value of selected option in the window or pressed key
-    // pagesize: Word;                             // flash page size
-    buffer: PWord;                              // flash buffer
+    buffer: array[0..0] of Byte;                // flash buffer
     val: LongWord;
-    i:  Byte;
+    i:  Word;
 
 
 function convert_bool(value: Boolean): String;
@@ -69,34 +68,43 @@ begin
     GProg(win_progress, 1, 2, 0);
     WPrint(win_progress, 2, 3, WOFF, 'Backing up');
     GetMem(buffer, pmax_config.pagesize * 4);
-    for i:= 2 to i < pmax_config.pagesize do
+    WOrn(win_progress, WPTOP, WPRGT, IntToStr(pmax_config.pagesize));
+    for i:= 2 to pmax_config.pagesize-1 do
     begin
-        GProg(win_progress, 1, 2, pmax_config.pagesize div i);
         buffer[i]:=PMAX_ReadFlash(i, 0);
+        GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
+        WOrn(win_progress, WPBOT, WPRGT, IntToStr(i));
     end;
+
     PMAX_WriteProtect(false);
+    // dummy
+    // if read_input = 255 then
+    // begin
     // reset variable for failed attempts
     read_input:=0;
-    WPrint(win_progress, 2, 3, WOFF, 'Erasing page        ');
-    PMAX_ErasePage(0);
+    WPrint(win_progress, 2, 3, WOFF, 'Erasing page 0      ');
+    // PMAX_ErasePage(0);
+    PMAX_ErasePage;
+    GProg(win_progress, 1, 2, 0);
     WPrint(win_progress, 2, 3, WOFF, 'Writing             ');
     PMAX_FetchFlashAddress; // fetch value to flash1 and flash2 variables; 
     buffer[0]:= flash1;
     buffer[1]:= flash2;
-    for i:=0 to i < pmax_config.pagesize do
+    for i:=0 to pmax_config.pagesize do
     begin
-        GProg(win_progress, 1, 2, pmax_config.pagesize div i);
+        GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
         PMAX_WriteFlash(i, 0, buffer[i]);
     end;
+    
     WPrint(win_progress, 2, 3, WOFF, 'Verifying           ');
-    for i:=0 to i < pmax_config.pagesize do
+    for i:=0 to pmax_config.pagesize do
     begin
-        GProg(win_progress, 1, 2, pmax_config.pagesize div i);
+        GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
         val:=PMAX_ReadFlash(i, 0);
         if val <> buffer[i] then
         begin
             WPrint(win_progress, 2, 3, WOFF, 'Failed at page      ');
-            WPrint(win_progress, 17, 3, WOFF, ByteToStr(i));
+            WPrint(win_progress, 17, 3, WOFF, IntToStr(i));
             read_input:=1;
             break;
         end;
@@ -105,7 +113,13 @@ begin
     begin
         WPrint(win_progress, 2, 3, WOFF, 'Completed           ');
     end;
+    
+    // end;
+    // Delay(1000);
     PMAX_WriteProtect(true);
+    
+    
+
     FreeMem(buffer, pmax_config.pagesize * 4);
     WPrint(win_progress, WPCNT, 5, WON, '[  OK  ]');
     read_input:= WaitKCX(WOFF);
@@ -293,7 +307,7 @@ end;
 
 procedure menu_reboot;
 begin
-    if pMAX_present then PMAX_EnableConfig(false);
+    if PMAX_present then PMAX_EnableConfig(false);
     Poke(580, 1);
     // asm {
 	// 	;lda:cmp:req 20
@@ -874,7 +888,7 @@ begin
         selected:=WMenu(win_pokeymax, 1, 1, GVERT, WOFF, selected, Length(menu_pmax), menu_pmax);
         case selected of
             1: begin
-                    if pMAX_present then
+                    if PMAX_present then
                     begin
                         status_close:= XESC;
                         menu_file;  // menu_flash
@@ -909,27 +923,27 @@ begin
     begin
         selected:=WMenu(win_config, 1, 1, GVERT, WOFF, selected, Length(menu_cfg), menu_cfg);
         case selected of
-            1: if pMAX_present then
+            1: if PMAX_present then
                 begin
                     status_close:= XESC;
                     menu_mode;
                 end;        
-            2: if pMAX_present then
+            2: if PMAX_present then
                 begin
                     status_close:= XESC;
                     menu_core;
                 end;
-            3: if pMAX_present then
+            3: if PMAX_present then
                 begin
                     status_close:= XESC;
                     menu_pokey;
                 end;
-            4: if (pMAX_present) then
+            4: if (PMAX_present) then
                 begin
                     status_close:= XESC;
                     menu_sid;
                 end;
-            5: if (pMAX_present) then
+            5: if (PMAX_present) then
                 begin
                     status_close:= XESC;
                     menu_psg;
@@ -946,7 +960,7 @@ var
 
 begin
 
-    if pMAX_present then
+    if PMAX_present then
     begin
         case PMAX_GetPokeys of
             1: s_pokey:='Mono';
@@ -1017,11 +1031,13 @@ begin
     win_main:=WOpen(0, 0, 40, 3, WOFF);
     WOrn(win_main, WPTOP, WPCNT, version);
     {$IFDEF DEBUG}
-    pMAX_present:= true;
+    PMAX_present:= true;
+    pmax_config.pagesize:=1024;
+    pmax_config.max_address:=$e600;
     {$ELSE}
-    pMAX_present:= PMAX_Detect;
+    PMAX_present:= PMAX_Detect;
     {$ENDIF}
-    if pMAX_present then 
+    if PMAX_present then 
     begin
         PMAX_EnableConfig(true);
         PMAX_ReadConfig;
@@ -1030,6 +1046,7 @@ begin
 
     win_details:=WOpen(0, 18, 40, 5, WOFF);
     WOrn(win_details, WPTOP, WPLFT, 'Details');
+    // WOrn(win_details, WPTOP,WPRGT, IntToStr(pmax_config.pagesize));
 
     while not status_end do
     begin
@@ -1046,7 +1063,7 @@ begin
             selected_menu:= 1;
         end;
     end;
-    if pMAX_present then PMAX_EnableConfig(false);
+    if PMAX_present then PMAX_EnableConfig(false);
     WClose(win_details);
     WClose(win_main);
     asm {
