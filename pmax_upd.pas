@@ -6,10 +6,10 @@ program pmax_upd;
 
 {$DEFINE BASICOFF}
 
-uses crt, sysutils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
+uses crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    version: string = 'PokeyMAX Update v.0.12';
+    version: string = 'PokeyMAX Update v.0.13';
 
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -40,7 +40,10 @@ var
     buffer: array[0..0] of Byte;                // flash buffer
     val: LongWord;
     i:  Word;
-
+    pmax_version: String[8];
+    // pmax_version: PString;
+    file_version: String[8];
+    f: File;
 
 function convert_bool(value: Boolean): String;
 begin
@@ -69,7 +72,7 @@ begin
     WPrint(win_progress, 2, 3, WOFF, 'Backing up');
     GetMem(buffer, pmax_config.pagesize * 4);
     WOrn(win_progress, WPTOP, WPRGT, IntToStr(pmax_config.pagesize));
-    for i:= 2 to pmax_config.pagesize-1 do
+    for i:= 2 to pmax_config.pagesize - 1 do
     begin
         buffer[i]:=PMAX_ReadFlash(i, 0);
         GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
@@ -77,27 +80,24 @@ begin
     end;
 
     PMAX_WriteProtect(false);
-    // dummy
-    // if read_input = 255 then
-    // begin
     // reset variable for failed attempts
     read_input:=0;
     WPrint(win_progress, 2, 3, WOFF, 'Erasing page 0      ');
-    // PMAX_ErasePage(0);
-    PMAX_ErasePage;
+    PMAX_ErasePage(0);
+    // PMAX_ErasePage;
     GProg(win_progress, 1, 2, 0);
     WPrint(win_progress, 2, 3, WOFF, 'Writing             ');
     PMAX_FetchFlashAddress; // fetch value to flash1 and flash2 variables; 
     buffer[0]:= flash1;
     buffer[1]:= flash2;
-    for i:=0 to pmax_config.pagesize do
+    for i:=0 to pmax_config.pagesize - 1 do
     begin
         GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
         PMAX_WriteFlash(i, 0, buffer[i]);
     end;
     
     WPrint(win_progress, 2, 3, WOFF, 'Verifying           ');
-    for i:=0 to pmax_config.pagesize do
+    for i:=0 to pmax_config.pagesize - 1 do
     begin
         GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
         val:=PMAX_ReadFlash(i, 0);
@@ -113,12 +113,7 @@ begin
     begin
         WPrint(win_progress, 2, 3, WOFF, 'Completed           ');
     end;
-    
-    // end;
-    // Delay(1000);
     PMAX_WriteProtect(true);
-    
-    
 
     FreeMem(buffer, pmax_config.pagesize * 4);
     WPrint(win_progress, WPCNT, 5, WON, '[  OK  ]');
@@ -126,13 +121,6 @@ begin
     WClose(win_progress);
 end;
 
-// procedure UpdateCore(filename: String[12]);
-// begin
-//   flash1:= PMAX_ReadFlash(0, 0);
-//   flash2:= PMAX_ReadFlash(1, 0);
-
-  
-// end;
 
 procedure menu_about;
 var
@@ -155,155 +143,268 @@ end;
 
 
 
-
-function menu_file: Boolean;
-
-
-const
-    list_drives: array[0..7] of string = ('D1:', 'D2:', 'D3:', 'D4:', 'D5:', 'D6:', 'D7:', 'D8:');
-    buttons : array[0..1] of string = ('[  OK  ]', '[Cancel]');
-    
-    FILENAME_SIZE = 12;
-
+procedure menu_flash;
 var
-    win_file: Byte;
-    // list_files: array[0..9] of string = ('FILE.XEX', 'FILE2.TXT', 'FILE3.DAT', 'CORE.BIN', 'FILE555.BIN', 'FILE6.BIN', 'FILE77.BIN', 'FILE8.BIN', 'FILE999.BIN', 'FILE101010.BIN');
-    list_files: array[0..128] of string[FILENAME_SIZE];
-    count_files: Byte = 0;
-    selected_drive: Byte;
-    read_file: Byte;
-    selected_file: String[FILENAME_SIZE];
-    selected_list: Byte;
-    // read_drive, read_list: Byte;
-    
-    tmp, i: Byte;    
-
-procedure read_dir;
-
-var
+    // win_flash: Byte;
     info : TSearchRec;
-    i: Byte;
-    // s: String[3];
+    pmax_right: String[5];
+    file_right: String[5];
 
-begin
-    // WOrn(win_file, WPBOT, WPRGT, CHBALL);
-    WOrn(win_file, WPBOT, WPRGT, ' O ');
-    if FindFirst(Concat(list_drives[selected_drive - 1],'*.BIN'), faAnyFile, info) = 0 then
-    // if FindFirst('D:*.BIN', faAnyFile, info) = 0 then
+    function VerifyCore(filename : String[15]): Boolean;
     begin
-        i:= 1; // 0
-        repeat
-            // s:= ' O ';
-            // WOrn(win_file, WPBOT, WPRGT, CHO_L);
-            WOrn(win_file, WPBOT, WPRGT, ' . ');
-            list_files[i]:= Trim(info.Name);
-            Inc(i);
-            // WOrn(win_file, WPBOT, WPRGT, CHBALL);
-            WOrn(win_file, WPBOT, WPRGT, ' O ');
-        until FindNext(info) <> 0;
-        FindClose(info);
-        count_files:= i - 1;
-    end;
-    WOrn(win_file, WPBOT, WPRGT, '   ');
-end;
-
-begin
-    Result:= false;
-    selected_drive:=1;
-    selected_list:=1;
-    
-    win_file:=WOpen(5, 4, 30, 16, WOFF);
-    WOrn(win_file, WPTOP, WPLFT, 'Choose a file');
-    WOrn(win_file, WPBOT, WPRGT, '   ');
-
-    read_dir;
-
-    if (count_files > 0) then
-    begin
-        selected_file:= list_files[selected_list - 1];
-        tmp:= Length(selected_file);
-        SetLength(selected_file, FILENAME_SIZE);
-        FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
-    end
-    else selected_file:='            ';
-    WPrint(win_file, 2, 2, WOFF, 'File:');
-    // WDiv(win_file, 3, WON);
-
-    WPrint(win_file, 21, 4, WOFF, 'Drive:');
-    GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
-    
-    // WPrint(win_file, 2, 4, WOFF, 'List:');
-    // if count_files > 0 then 
-    //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-
-    GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
-    
-    repeat
-        // file
-        read_input:= GInput(win_file, 8, 2, GFILE, 12, selected_file);
-        // if (read_input <> XESC) and (count_files > 0) then
-        // begin
-        //     for i:=0 to count_files - 1 do
-        //     begin
-        //         if list_files[i] = Trim(selected_file) then
-        //         begin
-        //             selected_list:= i + 1;
-        //             GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-        //         end;
-        //     end; 
-        // end;
-
-        // Drives combo
-        read_input:= GCombo(win_file, 21, 5, GEDIT, selected_drive, 8, list_drives);
-        if (read_input <> XESC) then
+        assign(f, filename);
+        reset(f, 1);
+        blockread(f, file_version[1], 8);
+        close(f);
+        file_version[0]:= #8;
+        pmax_right:= strRight(pmax_version,5);
+        file_right:= strRight(file_version,5);
+        // WPrint(win_progress, 2, 6, WON, pmax_right);
+        // WPrint(win_progress, 2, 7, WON, file_right);
+        // if strRight(pmax_version,5) <> strRight(file_version,5) then
+        if pmax_right <> file_right then
         begin
-            selected_drive := read_input;
+            // WPrint(win_progress, 2, 8, WON, 'different');
+            if pmax_version[6] <> file_version[6] then
+            begin
+                // WPrint(win_progress, 2, 9, WON, '6 char diff');
+                if (pmax_version[4] = file_version[4]) then
+                    WPrint(win_progress, 2, 8, WOFF, 'Core for different FPGA!');
+                Result:= false;
+            end
+            else begin
+                if pmax_version[5] = file_version[5] then
+                begin
+                    // WPrint(win_progress, 2, 10, WON, '5 char =');
+                    WPrint(win_progress, 2, 8, WOFF, 'Rewiring maybe required');
+                    Result:= true;
+                end
+                else begin
+                    // WPrint(win_progress, 2, 10, WON, '5 char diff');
+                    Result:=false;
+                end;
+            end;
         end
-        else if (read_input = XESC) then
-        begin
-            status_close:= XESC;
-            break;
+        else begin
+            // WPrint(win_progress, 2, 8, WON, 'file and core same');
+            Result:= true;
         end;
-        
-        GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
-
-        // Files List
-        // if (count_files > 0) then 
-        // begin
-        //     read_input:= GList(win_file, 2, 5, GEDIT, selected_list, 8, count_files, list_files);
-        //     if (read_input <> XESC) then
-        //     begin
-        //         selected_list := read_input;
-        //         selected_file:= list_files[selected_list - 1];
-        //         tmp:= Length(selected_file);
-        //         SetLength(selected_file, FILENAME_SIZE);
-        //         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
-        //         WPrint(win_file, 8, 2, WOFF, selected_file);
-        //     end
-        //     else if (read_input = XESC) then
-        //     begin
-        //         status_close:= XESC;
-        //         break;
-        //     end;
-            
-        //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-        // end;
-
-        // Buttons to confirm
-        status_close := GButton(win_file, 19, 11, GVERT, GEDIT, 2, buttons);    
-        GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
-
-    until status_close <> XTAB;
-
-    if status_close = 1 then
-    begin
-        Result:=true;
-        GAlert(Concat(Concat('Processing...', list_drives[selected_drive - 1]), selected_file));
     end;
+    procedure UpdateCore(filename: String[15]);
+    begin
+        WClr(win_progress);
+        WPrint(win_progress, 2, 2, WOFF, 'File:');
+        WPrint(win_progress, 8, 2, WOFF, filename);
+        if FileExists(filename) then
+        begin
+            if VerifyCore(filename) then
+            begin
+                // WPrint(win_progress, 2, 4, WOFF, 'File version:');
+                // WPrint(win_progress, 16, 4, WOFF, file_version);
+                // WPrint(win_progress, 2, 5, WOFF, 'Core version:');
+                // WPrint(win_progress, 16, 5, WOFF, pmax_version);
+                WPrint(win_progress, 2, 3, WOFF, 'File ver:');
+                WPrint(win_progress, 11, 3, WOFF, file_version);
+                WPrint(win_progress, 2, 4, WOFF, 'Core ver:');
+                WPrint(win_progress, 11, 4, WOFF, pmax_version);
+                WPrint(win_progress, WPCNT, 9, WOFF, '   Please wait   ');
+                WPrint(win_progress, WPCNT, 10, WON, ' DO NOT TURN OFF ');
 
-      WClose(win_file);
+                //   flash1:= PMAX_ReadFlash(0, 0);
+                //   flash2:= PMAX_ReadFlash(1, 0);
+                val:=0;
+                repeat
+                    i:=((val * 100) div pmax_config.max_address);
+                    WPrint(win_progress, 1, 6, WOFF, ' (');
+                    GProg(win_progress, 3, 6, i);
+                    WPrint(win_progress, 23, 6, WOFF, ') ');
+                    WPrint(win_progress, WPCNT, 7, WOFF, HexStr(val,5));
+                    Delay(10);
+                Inc(val, 256);
+                until val > pmax_config.max_address;
+            end
+            else begin
+                WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
+            end;
+        end
+        else begin
+            WPrint(win_progress, WPCNT, 4, WON, '     File not found!     ');
 
+            // if FindFirst('D:*.BIN', faAnyFile, info) = 0 then
+            // begin
+            //     i:= 1;
+            //     repeat
+            //         WPrint(win_progress, 2, 3 + i, WOFF, Trim(info.Name));
+            //         Inc(i);
+            //     until FindNext(info) <> 0;
+            //     FindClose(info);
+            // end;
+        end;
+    end;
+begin
+    win_progress:= WOpen(7, 4, 26, 13, WOFF);
+    WOrn(win_progress, WPTOP, WPLFT, 'CORE Flashing');
+    WPrint(win_progress, 2,1,WOFF,'Read file');
+    UpdateCore('D:CORE.BIN');
+    WaitKCX(WOFF);
+    UpdateCore('D:CORE1_27.BIN');
+    // WaitKCX(WOFF);
+    // UpdateCore('D:CORE1_23.BIN');
+    WPrint(win_progress, WPCNT, 9, WOFF, '                 ');
+    WPrint(win_progress, WPCNT, 10, WOFF, '                 ');
+    WPrint(win_progress, WPCNT, 11, WON, '[  OK  ]');
+    WaitKCX(WOFF);
+    WClose(win_progress);
 end;
+
+// function menu_file: Boolean;
+
+
+// const
+//     list_drives: array[0..7] of string = ('D1:', 'D2:', 'D3:', 'D4:', 'D5:', 'D6:', 'D7:', 'D8:');
+//     buttons : array[0..1] of string = ('[  OK  ]', '[Cancel]');
+    
+//     FILENAME_SIZE = 12;
+
+// var
+//     win_file: Byte;
+//     // list_files: array[0..9] of string = ('FILE.XEX', 'FILE2.TXT', 'FILE3.DAT', 'CORE.BIN', 'FILE555.BIN', 'FILE6.BIN', 'FILE77.BIN', 'FILE8.BIN', 'FILE999.BIN', 'FILE101010.BIN');
+//     list_files: array[0..128] of string[FILENAME_SIZE];
+//     count_files: Byte = 0;
+//     selected_drive: Byte;
+//     read_file: Byte;
+//     selected_file: String[FILENAME_SIZE];
+//     selected_list: Byte;
+//     // read_drive, read_list: Byte;
+    
+//     tmp, i: Byte;    
+
+// procedure read_dir;
+
+// var
+//     info : TSearchRec;
+//     i: Byte;
+//     // s: String[3];
+
+// begin
+//     // WOrn(win_file, WPBOT, WPRGT, CHBALL);
+//     WOrn(win_file, WPBOT, WPRGT, ' O ');
+//     if FindFirst(Concat(list_drives[selected_drive - 1],'*.BIN'), faAnyFile, info) = 0 then
+//     // if FindFirst('D:*.BIN', faAnyFile, info) = 0 then
+//     begin
+//         i:= 1; // 0
+//         repeat
+//             // s:= ' O ';
+//             // WOrn(win_file, WPBOT, WPRGT, CHO_L);
+//             WOrn(win_file, WPBOT, WPRGT, ' . ');
+//             list_files[i]:= Trim(info.Name);
+//             Inc(i);
+//             // WOrn(win_file, WPBOT, WPRGT, CHBALL);
+//             WOrn(win_file, WPBOT, WPRGT, ' O ');
+//         until FindNext(info) <> 0;
+//         FindClose(info);
+//         count_files:= i - 1;
+//     end;
+//     WOrn(win_file, WPBOT, WPRGT, '   ');
+// end;
+
+// begin
+//     Result:= false;
+//     selected_drive:=1;
+//     selected_list:=1;
+    
+//     win_file:=WOpen(5, 4, 30, 16, WOFF);
+//     WOrn(win_file, WPTOP, WPLFT, 'Choose a file');
+//     WOrn(win_file, WPBOT, WPRGT, '   ');
+
+//     read_dir;
+
+//     if (count_files > 0) then
+//     begin
+//         selected_file:= list_files[selected_list - 1];
+//         tmp:= Length(selected_file);
+//         SetLength(selected_file, FILENAME_SIZE);
+//         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
+//     end
+//     else selected_file:='            ';
+//     WPrint(win_file, 2, 2, WOFF, 'File:');
+//     // WDiv(win_file, 3, WON);
+
+//     WPrint(win_file, 21, 4, WOFF, 'Drive:');
+//     GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
+    
+//     // WPrint(win_file, 2, 4, WOFF, 'List:');
+//     // if count_files > 0 then 
+//     //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+
+//     GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
+    
+//     repeat
+//         // file
+//         read_input:= GInput(win_file, 8, 2, GFILE, 12, selected_file);
+//         // if (read_input <> XESC) and (count_files > 0) then
+//         // begin
+//         //     for i:=0 to count_files - 1 do
+//         //     begin
+//         //         if list_files[i] = Trim(selected_file) then
+//         //         begin
+//         //             selected_list:= i + 1;
+//         //             GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+//         //         end;
+//         //     end; 
+//         // end;
+
+//         // Drives combo
+//         read_input:= GCombo(win_file, 21, 5, GEDIT, selected_drive, 8, list_drives);
+//         if (read_input <> XESC) then
+//         begin
+//             selected_drive := read_input;
+//         end
+//         else if (read_input = XESC) then
+//         begin
+//             status_close:= XESC;
+//             break;
+//         end;
+        
+//         GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
+
+//         // Files List
+//         // if (count_files > 0) then 
+//         // begin
+//         //     read_input:= GList(win_file, 2, 5, GEDIT, selected_list, 8, count_files, list_files);
+//         //     if (read_input <> XESC) then
+//         //     begin
+//         //         selected_list := read_input;
+//         //         selected_file:= list_files[selected_list - 1];
+//         //         tmp:= Length(selected_file);
+//         //         SetLength(selected_file, FILENAME_SIZE);
+//         //         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
+//         //         WPrint(win_file, 8, 2, WOFF, selected_file);
+//         //     end
+//         //     else if (read_input = XESC) then
+//         //     begin
+//         //         status_close:= XESC;
+//         //         break;
+//         //     end;
+            
+//         //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+//         // end;
+
+//         // Buttons to confirm
+//         status_close := GButton(win_file, 19, 11, GVERT, GEDIT, 2, buttons);    
+//         GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
+
+//     until status_close <> XTAB;
+
+//     if status_close = 1 then
+//     begin
+//         Result:=true;
+//         GAlert(Concat(Concat('Processing...', list_drives[selected_drive - 1]), selected_file));
+//     end;
+
+//       WClose(win_file);
+
+// end;
 
 procedure menu_reboot;
 begin
@@ -891,7 +992,8 @@ begin
                     if PMAX_present then
                     begin
                         status_close:= XESC;
-                        menu_file;  // menu_flash
+                        // menu_file;
+                        menu_flash;
                     end;
                end;
             2: menu_reboot;
@@ -967,7 +1069,6 @@ begin
             2: s_pokey:='Stereo';
             4: s_pokey:='Quad';
         end;
-
         WPrint(win_details, 1, 1, WOFF, 'Core:'); 
         WPrint(win_details, 1, 2, WOFF, 'Pokey:');
         WPrint(win_details, 1, 3, WOFF, 'SID:');
@@ -978,7 +1079,7 @@ begin
 
         WPrint(win_details, 28, 3, WOFF, 'Sample:');
 
-        WPrint(win_details, 7, 1, WOFF, PMAX_GetCoreVersion);
+        WPrint(win_details, 7, 1, WOFF, pmax_version);
         WPrint(win_details, 8, 2, WOFF, s_pokey);
         WPrint(win_details, 8, 3, WOFF, convert_bool(PMAX_isSIDPresent));
         
@@ -1034,19 +1135,21 @@ begin
     PMAX_present:= true;
     pmax_config.pagesize:=1024;
     pmax_config.max_address:=$e600;
+    pmax_version:= '123M08QP';
     {$ELSE}
     PMAX_present:= PMAX_Detect;
-    {$ENDIF}
+
     if PMAX_present then 
     begin
         PMAX_EnableConfig(true);
         PMAX_ReadConfig;
         PMAX_ReadFlashType;
+        pmax_version:= PMAX_GetCoreVersion;
     end;
-
+    {$ENDIF}
     win_details:=WOpen(0, 18, 40, 5, WOFF);
     WOrn(win_details, WPTOP, WPLFT, 'Details');
-    // WOrn(win_details, WPTOP,WPRGT, IntToStr(pmax_config.pagesize));
+    WOrn(win_details, WPTOP,WPRGT, IntToStr(pmax_config.pagesize));
 
     while not status_end do
     begin
@@ -1066,7 +1169,7 @@ begin
     if PMAX_present then PMAX_EnableConfig(false);
     WClose(win_details);
     WClose(win_main);
-    asm {
-        jmp $a
-    };
+    // asm {
+    //     jmp $a
+    // };
 end.
