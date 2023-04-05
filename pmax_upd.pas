@@ -68,6 +68,8 @@ procedure FlashSaveConfig;
 begin
     win_progress:=WOpen(9, 10, 22, 7, WOFF);
     WOrn(win_progress, WPTOP, 2, 'Progress');
+    // WPrint(win_progress, 1, 2, WOFF, ' (');
+    // WPrint(win_progress, 23, 2, WOFF, ') ');
     GProg(win_progress, 1, 2, 0);
     WPrint(win_progress, 2, 3, WOFF, 'Backing up');
     GetMem(buffer, pmax_config.pagesize * 4);
@@ -212,12 +214,12 @@ var
 
                 //   flash1:= PMAX_ReadFlash(0, 0);
                 //   flash2:= PMAX_ReadFlash(1, 0);
+                WPrint(win_progress, 1, 6, WOFF, ' (');
+                WPrint(win_progress, 23, 6, WOFF, ') ');
                 val:=0;
                 repeat
                     i:=((val * 100) div pmax_config.max_address);
-                    WPrint(win_progress, 1, 6, WOFF, ' (');
                     GProg(win_progress, 3, 6, i);
-                    WPrint(win_progress, 23, 6, WOFF, ') ');
                     WPrint(win_progress, WPCNT, 7, WOFF, HexStr(val,5));
                     Delay(10);
                 Inc(val, 256);
