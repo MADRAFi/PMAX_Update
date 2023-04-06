@@ -41,9 +41,17 @@ var
     val: LongWord;
     i:  Word;
     pmax_version: String[8];
-    // pmax_version: PString;
     file_version: String[8];
     f: File;
+
+
+// function progress_percent(i: Longword):Byte;
+// begin
+//         if pmax_config.pagesize = 512 then
+//             Result:= (i * 100) shr 9 + 1
+//         else
+//             Result:= (i * 100) shr 10 + 1;
+// end;
 
 function convert_bool(value: Boolean): String;
 begin
@@ -66,59 +74,80 @@ end;
 
 procedure FlashSaveConfig;
 begin
-    win_progress:=WOpen(9, 10, 22, 7, WOFF);
+    // win_progress:=WOpen(9, 10, 22, 7, WOFF);
+    win_progress:=WOpen(7, 4, 26, 9, WOFF);
     WOrn(win_progress, WPTOP, 2, 'Progress');
-    // WPrint(win_progress, 1, 2, WOFF, ' (');
-    // WPrint(win_progress, 23, 2, WOFF, ') ');
-    GProg(win_progress, 1, 2, 0);
-    WPrint(win_progress, 2, 3, WOFF, 'Backing up');
+    WPrint(win_progress, 2, 2, WOFF, 'Saving settings');
+    WPrint(win_progress, 1, 4, WOFF, ' (');
+    WPrint(win_progress, 23, 4, WOFF, ') ');
+    WPrint(win_progress, 3, 5, WOFF, 'Backing up');
+    WaitKCX(WOFF);
     GetMem(buffer, pmax_config.pagesize * 4);
-    WOrn(win_progress, WPTOP, WPRGT, IntToStr(pmax_config.pagesize));
+    // WOrn(win_progress, WPTOP, WPRGT, IntToStr(pmax_config.pagesize));
     for i:= 2 to pmax_config.pagesize - 1 do
     begin
+        val:=((i * 100) div pmax_config.pagesize) + 1;
+        if (i mod 10) = 0 then
+        begin
+            GProg(win_progress, 3, 4, val);
+            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
+            // WPrint(win_progress, 19, 5, WOFF, IntToStr(val));
+        end;
         buffer[i]:=PMAX_ReadFlash(i, 0);
-        GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
-        WOrn(win_progress, WPBOT, WPRGT, IntToStr(i));
     end;
+    WaitKCX(WOFF);
 
     PMAX_WriteProtect(false);
     // reset variable for failed attempts
     read_input:=0;
-    WPrint(win_progress, 2, 3, WOFF, 'Erasing page 0      ');
-    PMAX_ErasePage(0);
-    // PMAX_ErasePage;
+    WPrint(win_progress, 3, 5, WOFF, 'Erasing page 0      ');
+    // PMAX_ErasePage(0);
     GProg(win_progress, 1, 2, 0);
-    WPrint(win_progress, 2, 3, WOFF, 'Writing             ');
+    WPrint(win_progress, 3, 5, WOFF, 'Writing             ');
+    // WPrint(win_progress, 17, 3, WOFF, '    ');
     PMAX_FetchFlashAddress; // fetch value to flash1 and flash2 variables; 
     buffer[0]:= flash1;
     buffer[1]:= flash2;
     for i:=0 to pmax_config.pagesize - 1 do
     begin
-        GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
-        PMAX_WriteFlash(i, 0, buffer[i]);
+        val:=((i * 100) div pmax_config.pagesize) + 1;
+        if (i mod 10) = 0 then
+        begin
+            GProg(win_progress, 3, 4, val);
+            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
+        end;
+        // PMAX_WriteFlash(i, 0, buffer[i]);
     end;
     
-    WPrint(win_progress, 2, 3, WOFF, 'Verifying           ');
+    WPrint(win_progress, 3, 5, WOFF, 'Verifying           ');
+    // WPrint(win_progress, 17, 3, WOFF, '    ');
     for i:=0 to pmax_config.pagesize - 1 do
     begin
-        GProg(win_progress, 1, 2, (i * 100) div pmax_config.pagesize + 1);
+        val:=((i * 100) div pmax_config.pagesize) + 1;
+        if (i mod 10) = 0 then
+        begin
+            GProg(win_progress, 3, 4, val);
+            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
+        end;
         val:=PMAX_ReadFlash(i, 0);
         if val <> buffer[i] then
         begin
-            WPrint(win_progress, 2, 3, WOFF, 'Failed at page      ');
-            WPrint(win_progress, 17, 3, WOFF, IntToStr(i));
+            WPrint(win_progress, 3, 5, WOFF, 'Failed at page      ');
+            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
             read_input:=1;
             break;
         end;
+        
     end;
     if read_input = 0 then
     begin
-        WPrint(win_progress, 2, 3, WOFF, 'Completed           ');
+        WPrint(win_progress, 3, 5, WOFF, 'Completed           ');
+        WPrint(win_progress, 19, 5, WOFF, '    ');
     end;
     PMAX_WriteProtect(true);
 
     FreeMem(buffer, pmax_config.pagesize * 4);
-    WPrint(win_progress, WPCNT, 5, WON, '[  OK  ]');
+    WPrint(win_progress, WPCNT, 7, WON, '[  OK  ]');
     read_input:= WaitKCX(WOFF);
     WClose(win_progress);
 end;
@@ -218,10 +247,18 @@ var
                 WPrint(win_progress, 23, 6, WOFF, ') ');
                 val:=0;
                 repeat
+                    // i:= progress_percent(val);
                     i:=((val * 100) div pmax_config.max_address);
-                    GProg(win_progress, 3, 6, i);
-                    WPrint(win_progress, WPCNT, 7, WOFF, HexStr(val,5));
-                    Delay(10);
+                    if (val mod 10) = 0 then
+                    begin
+                        GProg(win_progress, 3, 6, i);;
+                        WPrint(win_progress, WPCNT, 7, WOFF, HexStr(val,5));
+                    end;
+                    // i:=((val * 100) div pmax_config.max_address);
+                    // GProg(win_progress, 3, 6, i);
+                    // WPrint(win_progress, WPCNT, 7, WOFF, HexStr(val,5));
+                    // Delay(10);
+
                 Inc(val, 256);
                 until val > pmax_config.max_address;
             end
