@@ -37,21 +37,13 @@ var
     status_close: Byte;                         // flag to indicate current window will close
     PMAX_present: Boolean = false;              // Set to true if PokeyMax is present
     read_input: Byte;                           // Contains value of selected option in the window or pressed key
-    buffer: array[0..0] of Byte;                // flash buffer
+    // buffer: array[0..0] of Byte;                // flash buffer
+    buffer: array[0..1023] of LongWord;
     val: LongWord;
     i:  Word;
     pmax_version: String[8];
     file_version: String[8];
     f: File;
-
-
-// function progress_percent(i: Longword):Byte;
-// begin
-//         if pmax_config.pagesize = 512 then
-//             Result:= (i * 100) shr 9 + 1
-//         else
-//             Result:= (i * 100) shr 10 + 1;
-// end;
 
 function convert_bool(value: Boolean): String;
 begin
@@ -75,36 +67,32 @@ end;
 procedure FlashSaveConfig;
 begin
     // win_progress:=WOpen(9, 10, 22, 7, WOFF);
-    win_progress:=WOpen(7, 4, 26, 9, WOFF);
-    WOrn(win_progress, WPTOP, 2, 'Progress');
-    WPrint(win_progress, 2, 2, WOFF, 'Saving settings');
-    WPrint(win_progress, 1, 4, WOFF, ' (');
-    WPrint(win_progress, 23, 4, WOFF, ') ');
-    WPrint(win_progress, 3, 5, WOFF, 'Backing up');
-    WaitKCX(WOFF);
-    GetMem(buffer, pmax_config.pagesize * 4);
+    win_progress:=WOpen(7, 6, 26, 8, WOFF);
+    WOrn(win_progress, WPTOP, WPLFT, 'Saving settings');
+    WPrint(win_progress, 1, 3, WOFF, ' (');
+    WPrint(win_progress, 23, 3, WOFF, ') ');
+    WPrint(win_progress, 3, 4, WOFF, 'Backing up');
+    // GetMem(buffer, pmax_config.pagesize * 4);
     // WOrn(win_progress, WPTOP, WPRGT, IntToStr(pmax_config.pagesize));
     for i:= 2 to pmax_config.pagesize - 1 do
     begin
         val:=((i * 100) div pmax_config.pagesize) + 1;
         if (i mod 10) = 0 then
         begin
-            GProg(win_progress, 3, 4, val);
-            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
-            // WPrint(win_progress, 19, 5, WOFF, IntToStr(val));
+            GProg(win_progress, 3, 3, val);
+            WPrint(win_progress, 20, 4, WOFF, IntToStr(i));
         end;
-        buffer[i]:=PMAX_ReadFlash(i, 0);
+        // buffer[i]:=PMAX_ReadFlash(i, 0);
     end;
-    WaitKCX(WOFF);
 
     PMAX_WriteProtect(false);
     // reset variable for failed attempts
     read_input:=0;
-    WPrint(win_progress, 3, 5, WOFF, 'Erasing page 0      ');
+    WPrint(win_progress, 3, 4, WOFF, 'Erasing page 0');
     // PMAX_ErasePage(0);
     GProg(win_progress, 1, 2, 0);
-    WPrint(win_progress, 3, 5, WOFF, 'Writing             ');
-    // WPrint(win_progress, 17, 3, WOFF, '    ');
+    WPrint(win_progress, 3, 4, WOFF, 'Writing       ');
+    WPrint(win_progress, 20, 4, WOFF, '    ');
     PMAX_FetchFlashAddress; // fetch value to flash1 and flash2 variables; 
     buffer[0]:= flash1;
     buffer[1]:= flash2;
@@ -113,27 +101,27 @@ begin
         val:=((i * 100) div pmax_config.pagesize) + 1;
         if (i mod 10) = 0 then
         begin
-            GProg(win_progress, 3, 4, val);
-            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
+            GProg(win_progress, 3, 3, val);
+            WPrint(win_progress, 20, 4, WOFF, IntToStr(i));
         end;
         // PMAX_WriteFlash(i, 0, buffer[i]);
     end;
     
-    WPrint(win_progress, 3, 5, WOFF, 'Verifying           ');
-    // WPrint(win_progress, 17, 3, WOFF, '    ');
+    WPrint(win_progress, 3, 4, WOFF, 'Verifying     ');
+    WPrint(win_progress, 20, 4, WOFF, '    ');
     for i:=0 to pmax_config.pagesize - 1 do
     begin
         val:=((i * 100) div pmax_config.pagesize) + 1;
         if (i mod 10) = 0 then
         begin
-            GProg(win_progress, 3, 4, val);
-            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
+            GProg(win_progress, 3, 3, val);
+            WPrint(win_progress, 20, 4, WOFF, IntToStr(i));
         end;
         val:=PMAX_ReadFlash(i, 0);
         if val <> buffer[i] then
         begin
-            WPrint(win_progress, 3, 5, WOFF, 'Failed at page      ');
-            WPrint(win_progress, 19, 5, WOFF, IntToStr(i));
+            WPrint(win_progress, 3, 4, WOFF, 'Failed at page');
+            WPrint(win_progress, 20, 4, WOFF, IntToStr(i));
             read_input:=1;
             break;
         end;
@@ -141,38 +129,16 @@ begin
     end;
     if read_input = 0 then
     begin
-        WPrint(win_progress, 3, 5, WOFF, 'Completed           ');
-        WPrint(win_progress, 19, 5, WOFF, '    ');
+        WPrint(win_progress, 3, 4, WOFF, 'Completed     ');
+        WPrint(win_progress, 20, 4, WOFF, '    ');
     end;
     PMAX_WriteProtect(true);
 
-    FreeMem(buffer, pmax_config.pagesize * 4);
-    WPrint(win_progress, WPCNT, 7, WON, '[  OK  ]');
+    // FreeMem(buffer, pmax_config.pagesize * 4);
+    WPrint(win_progress, WPCNT, 6, WON, '[  OK  ]');
     read_input:= WaitKCX(WOFF);
     WClose(win_progress);
 end;
-
-
-procedure menu_about;
-var
-    win_about: Byte;
-
-begin
-    win_about:=WOpen(4, 5, 31, 12, WOFF);
-    WOrn(win_about, WPTOP, WPLFT, 'About');
-    WPrint(win_about, WPCNT, 2, WOFF, version);
-    WPrint(win_about, WPCNT, 4, WOFF, '(c) 2023 MADRAFi');
-    WPrint(win_about, WPCNT, 5, WOFF, 'Based on flash code by Foft');
-    WPrint(win_about, WPCNT, 6, WOFF, 'Developped using MAD-Pascal');
-    WPrint(win_about, WPCNT, 7, WOFF, 'and Windows Library');
-    WPrint(win_about, WPCNT, 9, WON, '[  OK  ]');
-
-    WaitKCX(WOFF);
-    WClose(win_about);
-end;
-// procedure read_dir(drive: String[3]);
-
-
 
 procedure menu_flash;
 var
@@ -195,10 +161,8 @@ var
         // if strRight(pmax_version,5) <> strRight(file_version,5) then
         if pmax_right <> file_right then
         begin
-            // WPrint(win_progress, 2, 8, WON, 'different');
             if pmax_version[6] <> file_version[6] then
             begin
-                // WPrint(win_progress, 2, 9, WON, '6 char diff');
                 if (pmax_version[4] = file_version[4]) then
                     WPrint(win_progress, 2, 8, WOFF, 'Core for different FPGA!');
                 Result:= false;
@@ -206,22 +170,23 @@ var
             else begin
                 if pmax_version[5] = file_version[5] then
                 begin
-                    // WPrint(win_progress, 2, 10, WON, '5 char =');
                     WPrint(win_progress, 2, 8, WOFF, 'Rewiring maybe required');
                     Result:= true;
                 end
                 else begin
-                    // WPrint(win_progress, 2, 10, WON, '5 char diff');
                     Result:=false;
                 end;
             end;
         end
         else begin
-            // WPrint(win_progress, 2, 8, WON, 'file and core same');
             Result:= true;
         end;
     end;
     procedure UpdateCore(filename: String[15]);
+    var
+        s: PString;
+        test: LongWord;
+
     begin
         WClr(win_progress);
         WPrint(win_progress, 2, 2, WOFF, 'File:');
@@ -241,33 +206,89 @@ var
                 WPrint(win_progress, WPCNT, 9, WOFF, '   Please wait   ');
                 WPrint(win_progress, WPCNT, 10, WON, ' DO NOT TURN OFF ');
 
-                //   flash1:= PMAX_ReadFlash(0, 0);
-                //   flash2:= PMAX_ReadFlash(1, 0);
+                flash1:= PMAX_ReadFlash(0, 0);
+                flash2:= PMAX_ReadFlash(1, 0);
+
                 WPrint(win_progress, 1, 6, WOFF, ' (');
                 WPrint(win_progress, 23, 6, WOFF, ') ');
-                val:=0;
+                // PMAX_WriteProtect(false);
+                WPrint(win_progress, 3, 7, WOFF, 'Erasing sector');
+                WPrint(win_progress, 20, 7, WOFF, '    ');
+                for i:=1 to 4 do
+                begin
+                    // GProg(win_progress, 3, 6, i * 25);
+                    GProg(win_progress, 3, 6, (i SHL 5) - i);
+                    WPrint(win_progress, 20, 7, WOFF, ByteToStr(i));
+                    // PMAX_EraseSector(i);
+                    Delay(100);
+                end;
+                // // GetMem(buffer, 1024);
+                assign(f, filename);
+                reset(f, 1);
+                // error indocator
+                read_input:= 0;
+                WPrint(win_progress, 3, 7, WOFF, 'Flashing            ');
+                GProg(win_progress, 3, 6, 0);
+                val:= 0;
                 repeat
-                    // i:= progress_percent(val);
                     i:=((val * 100) div pmax_config.max_address);
                     if (val mod 10) = 0 then
                     begin
-                        GProg(win_progress, 3, 6, i);;
-                        WPrint(win_progress, WPCNT, 7, WOFF, HexStr(val,5));
+                        GProg(win_progress, 3, 6, i);
+                        WPrint(win_progress, 18, 7, WOFF, HexStr(val,5));
                     end;
-                    // i:=((val * 100) div pmax_config.max_address);
-                    // GProg(win_progress, 3, 6, i);
-                    // WPrint(win_progress, WPCNT, 7, WOFF, HexStr(val,5));
-                    // Delay(10);
+                    
+                    blockread(f, buffer, 1024);
+                    if (IOResult < 128) then 
+                    begin
+                        if val = 0 then
+                        begin
+                        // restore config
+                            buffer[0]:= flash1;
+                            buffer[1]:= flash2;    
+                        end;
+                        
+                        for i:= 0 to 255 do
+                        begin
+                            // if (buffer[i] <> $ffffffff) then
+                            begin
+                                // PMAX_WriteFlash(val + i, 0, buffer[i]);
+                                // Delay(10);
+                            end;
+                        end;
 
-                Inc(val, 256);
-                until val > pmax_config.max_address;
+                    end
+                    else begin
+                        // error
+                        read_input:= 1;
+                        WPrint(win_progress, 3, 7, WOFF, 'Error reading file  ');
+                        // WPrint(win_progress, 20, 7, WOFF, '    ');
+                        break;
+                    end;
+                    Inc(val, 256);
+                until (val > pmax_config.max_address) or (IOResult = 3);
+                GProg(win_progress, 3, 6, 100);
+                // PMAX_WriteProtect(true);
+                close(f);
+
+                // // FreeMem(buffer, 1024);
+                if read_input = 0 then 
+                begin
+                    WPrint(win_progress, 3, 7, WOFF, 'Completed             ');
+                end;
+                for i:=0 to 1 do
+                begin
+                    WPrint(win_progress, WPCNT, 9 + i, WOFF, '                 ');
+                // WPrint(win_progress, WPCNT, 10, WON, '                 ');
+                end;
+                repeat until keypressed;
             end
             else begin
                 WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
             end;
         end
         else begin
-            WPrint(win_progress, WPCNT, 4, WON, '     File not found!     ');
+            WPrint(win_progress, WPCNT, 4, WON, '    File not found!     ');
 
             // if FindFirst('D:*.BIN', faAnyFile, info) = 0 then
             // begin
@@ -284,8 +305,8 @@ begin
     win_progress:= WOpen(7, 4, 26, 13, WOFF);
     WOrn(win_progress, WPTOP, WPLFT, 'CORE Flashing');
     WPrint(win_progress, 2,1,WOFF,'Read file');
-    UpdateCore('D:CORE.BIN');
-    WaitKCX(WOFF);
+    // UpdateCore('D:CORE.BIN');
+    // WaitKCX(WOFF);
     UpdateCore('D:CORE1_27.BIN');
     // WaitKCX(WOFF);
     // UpdateCore('D:CORE1_23.BIN');
@@ -445,6 +466,27 @@ end;
 
 // end;
 
+// procedure read_dir(drive: String[3]);
+
+procedure menu_about;
+var
+    win_about: Byte;
+
+begin
+    win_about:=WOpen(4, 5, 31, 12, WOFF);
+    WOrn(win_about, WPTOP, WPLFT, 'About');
+    WPrint(win_about, WPCNT, 2, WOFF, version);
+    WPrint(win_about, WPCNT, 4, WOFF, '(c) 2023 MADRAFi');
+    WPrint(win_about, WPCNT, 5, WOFF, 'Based on flash code by Foft');
+    WPrint(win_about, WPCNT, 6, WOFF, 'Developped using MAD-Pascal');
+    WPrint(win_about, WPCNT, 7, WOFF, 'and Windows Library');
+    WPrint(win_about, WPCNT, 9, WON, '[  OK  ]');
+
+    WaitKCX(WOFF);
+    WClose(win_about);
+end;
+
+
 procedure menu_reboot;
 begin
     if PMAX_present then PMAX_EnableConfig(false);
@@ -546,11 +588,11 @@ begin
             PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
+                status_close:= XESC;
                 FlashSaveConfig;
             end;
         end;
     end;
-
     WClose(win_mode);
 end;
 
@@ -756,6 +798,7 @@ begin
             PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
+                status_close:= XESC;
                 FlashSaveConfig;
             end;
         end;
@@ -838,6 +881,7 @@ begin
             PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
+                status_close:= XESC;
                 FlashSaveConfig;
             end;
         end;
@@ -907,6 +951,7 @@ begin
             PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
+                status_close:= XESC;
                 FlashSaveConfig;
             end;
         end;
@@ -1001,6 +1046,7 @@ begin
             PMAX_WriteConfig;
             if PMAX_isFlashPresent then
             begin
+                status_close:= XESC;
                 FlashSaveConfig;
             end;
         end;
@@ -1021,7 +1067,7 @@ const
 begin
     status_close:= 0;
     selected:= 1;
-    win_pokeymax:=WOpen(1, 3, 10, 5, WOFF);
+    win_pokeymax:=WOpen(1, 2, 10, 5, WOFF);
 
     while status_close<>XESC do
     begin
@@ -1031,8 +1077,12 @@ begin
                     if PMAX_present then
                     begin
                         status_close:= XESC;
-                        // menu_file;
-                        menu_flash;
+                        if GConfirm(string_confirm) then
+                        begin
+                            status_close:= XESC;
+                            // menu_file;
+                            menu_flash;
+                        end;
                     end;
                end;
             2: menu_reboot;
@@ -1172,8 +1222,11 @@ begin
     WOrn(win_main, WPTOP, WPCNT, version);
     {$IFDEF DEBUG}
     PMAX_present:= true;
-    pmax_config.pagesize:=1024;
+    // pmax_config.pagesize:=1024;
+    // pmax_config.max_address:=$19800;
+    pmax_config.pagesize:=512;
     pmax_config.max_address:=$e600;
+    
     pmax_version:= '123M08QP';
     {$ELSE}
     PMAX_present:= PMAX_Detect;
