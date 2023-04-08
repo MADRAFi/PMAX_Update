@@ -38,7 +38,7 @@ var
     PMAX_present: Boolean = false;              // Set to true if PokeyMax is present
     read_input: Byte;                           // Contains value of selected option in the window or pressed key
     // buffer: array[0..0] of Byte;                // flash buffer
-    buffer: array[0..1023] of LongWord;
+    buffer: array[0..1023] of Byte;
     val: LongWord;
     i:  Word;
     pmax_version: String[8];
@@ -250,10 +250,10 @@ var
                         
                         for i:= 0 to 255 do
                         begin
-                            // if (buffer[i] <> $ffffffff) then
+                            if (buffer[i] <> $ffffffff) then
                             begin
                                 // PMAX_WriteFlash(val + i, 0, buffer[i]);
-                                // Delay(10);
+                                Delay(1);
                             end;
                         end;
 
@@ -276,12 +276,12 @@ var
                 begin
                     WPrint(win_progress, 3, 7, WOFF, 'Completed             ');
                 end;
-                for i:=0 to 1 do
-                begin
-                    WPrint(win_progress, WPCNT, 9 + i, WOFF, '                 ');
-                // WPrint(win_progress, WPCNT, 10, WON, '                 ');
-                end;
-                repeat until keypressed;
+                // for i:=0 to 1 do
+                // begin
+                //     WPrint(win_progress, WPCNT, 9 + i, WOFF, '                 ');
+                // // WPrint(win_progress, WPCNT, 10, WON, '                 ');
+                // end;
+                // repeat until keypressed;
             end
             else begin
                 WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
