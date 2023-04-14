@@ -6,10 +6,10 @@ program pmax_upd;
 
 {$DEFINE BASICOFF}
 
-uses crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
+uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v.0.14';
+    VERSION = 'PokeyMAX Update v.0.15';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -37,14 +37,13 @@ var
     status_close: Byte;                         // flag to indicate current window will close
     PMAX_present: Boolean = false;              // Set to true if PokeyMax is present
     read_input: Byte;                           // Contains value of selected option in the window or pressed key
-    // buffer: array[0..0] of Byte;                // flash buffer
-    buffer: array[0..BYTESTOREAD - 1] of LongWord;
+    // buffer: array[0..BYTESTOREAD - 1] of LongWord;
+    buffer: array[0..1023] of LongWord;
     val: LongWord;
-    i:  Word;
+    i: Byte;
     pmax_version: String[8];
     file_version: String[8];
     f: File;
-    x: Byte;
 
 function convert_bool(value: Boolean): String;
 begin
@@ -65,23 +64,51 @@ begin
     end;    
 end;
 
+procedure UpdateProgress(max: Word; y: Byte);
+begin
+    if (val mod 10) = 0 then
+    begin
+        i:=((val * 100) div max) + 1;
+        // reused string variable
+        file_version:= Concat(ByteToStr(i),'%');
+        WPrint(win_progress, WPCNT, y, WOFF, file_version);
+        GProg(win_progress, 3, y + 1, i);
+        WPrint(win_progress, 18, y + 2, WOFF, HexStr(val, 5));
+        atract:= 0;
+    end;   
+end;
+
+procedure FinishProgress;
+begin
+    if (read_input = 0) then
+    begin
+        WPrint(win_progress, WPCNT, baW.bH[win_progress] - 8, WOFF, '100%');
+        GProg(win_progress, 3, baW.bH[win_progress] - 7, 100);
+        WPrint(win_progress, 3, baW.bH[win_progress] - 6, WOFF, 'Completed     ');
+        WPrint(win_progress, 18, baW.bH[win_progress] - 6, WOFF, '     ');
+        
+    end;
+    for i:= 3 to 4 do
+    begin
+        WPrint(win_progress, WPCNT, baW.bH[win_progress] - i, WOFF, '                    ');    
+    end;
+    WPrint(win_progress, WPCNT, baW.bH[win_progress] - 2, WON, '[  OK  ]');
+    WaitKCX(WOFF);
+    WClose(win_progress);
+end;
+
 procedure FlashSaveConfig;
 begin
-    win_progress:=WOpen(7, 6, 26, 8, WOFF);
+    win_progress:=WOpen(7, 7, 26, 10, WOFF);
     WOrn(win_progress, WPTOP, WPLFT, 'Saving settings');
     WPrint(win_progress, 1, 3, WOFF, ' (');
     WPrint(win_progress, 23, 3, WOFF, ') ');
     WPrint(win_progress, 3, 4, WOFF, 'Backing up');
-    // GetMem(buffer, pmax_config.pagesize * 4);
-    for i:= 2 to pmax_config.pagesize - 1 do
+    WPrint(win_progress, WPCNT, 6, WON, ' DO NOT TURN OFF ');
+    for val:= 2 to pmax_config.pagesize - 1 do
     begin
-        val:=((i * 100) div pmax_config.pagesize) + 1;
-        if (i mod 10) = 0 then
-        begin
-            GProg(win_progress, 3, 3, val);
-            WPrint(win_progress, 20, 4, WOFF, HexStr(i, 5));
-        end;
-        buffer[i]:=PMAX_ReadFlash(i, 0);
+        UpdateProgress(pmax_config.pagesize, 2);
+        buffer[val]:=PMAX_ReadFlash(val, 0);
     end;
 
     PMAX_WriteProtect(false);
@@ -91,52 +118,33 @@ begin
     PMAX_ErasePage(0);
     GProg(win_progress, 1, 2, 0);
     WPrint(win_progress, 3, 4, WOFF, 'Writing       ');
-    WPrint(win_progress, 20, 4, WOFF, '    ');
+    WPrint(win_progress, 18, 4, WOFF, '     ');
     PMAX_FetchFlashAddress; // fetch value to flash1 and flash2 variables; 
     buffer[0]:= flash1;
     buffer[1]:= flash2;
-    for i:=0 to pmax_config.pagesize - 1 do
+    for val:=0 to pmax_config.pagesize - 1 do
     begin
-        val:=((i * 100) div pmax_config.pagesize) + 1;
-        if (i mod 10) = 0 then
-        begin
-            GProg(win_progress, 3, 3, val);
-            WPrint(win_progress, 20, 4, WOFF, IntToStr(i));
-        end;
-        PMAX_WriteFlash(i, 0, buffer[i]);
+        UpdateProgress(pmax_config.pagesize, 2);
+        PMAX_WriteFlash(val, 0, buffer[val]);
     end;
     
     WPrint(win_progress, 3, 4, WOFF, 'Verifying     ');
-    WPrint(win_progress, 20, 4, WOFF, '    ');
-    for i:=0 to pmax_config.pagesize - 1 do
+    WPrint(win_progress, 18, 4, WOFF, '     ');
+    for val:=0 to pmax_config.pagesize - 1 do
     begin
-        val:=((i * 100) div pmax_config.pagesize) + 1;
-        if (i mod 10) = 0 then
-        begin
-            GProg(win_progress, 3, 3, val);
-            WPrint(win_progress, 20, 4, WOFF, IntToStr(i));
-        end;
-        val:=PMAX_ReadFlash(i, 0);
-        if val <> buffer[i] then
+        UpdateProgress(pmax_config.pagesize, 2);
+        res:=PMAX_ReadFlash(val, 0);
+        if res <> buffer[val] then
         begin
             WPrint(win_progress, 3, 4, WOFF, 'Failed at page');
-            WPrint(win_progress, 20, 4, WOFF, IntToStr(i));
+            WPrint(win_progress, 20, 4, WOFF, HexStr(val, 5));
             read_input:=1;
             break;
         end;
         
     end;
-    if read_input = 0 then
-    begin
-        WPrint(win_progress, 3, 4, WOFF, 'Completed     ');
-        WPrint(win_progress, 20, 4, WOFF, '    ');
-    end;
     PMAX_WriteProtect(true);
-
-    // FreeMem(buffer, pmax_config.pagesize * 4);
-    WPrint(win_progress, WPCNT, 6, WON, '[  OK  ]');
-    read_input:= WaitKCX(WOFF);
-    WClose(win_progress);
+    FinishProgress;
 end;
 
 
@@ -153,9 +161,6 @@ begin
     file_version[0]:= #8;
     pmax_right:= strRight(pmax_version,5);
     file_right:= strRight(file_version,5);
-    // WPrint(win_progress, 2, 6, WON, pmax_right);
-    // WPrint(win_progress, 2, 7, WON, file_right);
-    // if strRight(pmax_version,5) <> strRight(file_version,5) then
     if pmax_right <> file_right then
     begin
         if pmax_version[6] <> file_version[6] then
@@ -184,55 +189,46 @@ procedure menu_flash;
     procedure UpdateCore(filename: String[15]);
 
     begin
-        // WClr(win_progress);
         WPrint(win_progress, 2, 2, WOFF, 'File:');
         WPrint(win_progress, 8, 2, WOFF, filename);
         if FileExists(filename) then
         begin
+            WPrint(win_progress, 2, 4, WOFF, 'Core ver:');
+            WPrint(win_progress, 11, 4, WOFF, pmax_version);
             if VerifyFile(filename) then
             begin
-                // WPrint(win_progress, 2, 4, WOFF, 'File version:');
-                // WPrint(win_progress, 16, 4, WOFF, file_version);
-                // WPrint(win_progress, 2, 5, WOFF, 'Core version:');
-                // WPrint(win_progress, 16, 5, WOFF, pmax_version);
                 WPrint(win_progress, 2, 3, WOFF, 'File ver:');
                 WPrint(win_progress, 11, 3, WOFF, file_version);
-                WPrint(win_progress, 2, 4, WOFF, 'Core ver:');
-                WPrint(win_progress, 11, 4, WOFF, pmax_version);
+
                 WPrint(win_progress, WPCNT, 9, WOFF, '   Please wait   ');
                 WPrint(win_progress, WPCNT, 10, WON, ' DO NOT TURN OFF ');
 
                 flash1:= PMAX_ReadFlash(0, 0);
                 flash2:= PMAX_ReadFlash(1, 0);
 
-                WPrint(win_progress, 1, 6, WOFF, ' (');
-                WPrint(win_progress, 23, 6, WOFF, ') ');
+                WPrint(win_progress, 1, 7, WOFF, ' (');
+                WPrint(win_progress, 23, 7, WOFF, ') ');
                 PMAX_WriteProtect(false);
-                WPrint(win_progress, 3, 7, WOFF, 'Erasing sector');
-                WPrint(win_progress, 20, 7, WOFF, '    ');
+                WPrint(win_progress, 3, 8, WOFF, 'Erasing sector');
+                WPrint(win_progress, 20, 8, WOFF, '    ');
                 for i:=1 to 4 do
                 begin
-                    // GProg(win_progress, 3, 6, i * 25);
-                    GProg(win_progress, 3, 6, (i SHL 5) - i);
-                    WPrint(win_progress, 20, 7, WOFF, ByteToStr(i));
+                    // i * 25
+                    GProg(win_progress, 3, 7, (i SHL 5) - i);
+                    WPrint(win_progress, 20, 8, WOFF, ByteToStr(i));
                     PMAX_EraseSector(i);
                 end;
                 assign(f, filename);
                 reset(f, 1);
                 // error indocator
                 read_input:= 0;
-                WPrint(win_progress, 3, 7, WOFF, 'Flashing            ');
-                GProg(win_progress, 3, 6, 0);
+                GProg(win_progress, 3, 7, 0);
+                WPrint(win_progress, 3, 8, WOFF, 'Flashing            ');
                 val:= 0;
                 repeat
-                    i:=((val * 100) div pmax_config.max_address);
-                    if (val mod 10) = 0 then
-                    begin
-                        GProg(win_progress, 3, 6, i);
-                        WPrint(win_progress, 18, 7, WOFF, HexStr(val,5));
-                    end;
-                    
-                    blockread(f, buffer, 1024);
+                     UpdateProgress(pmax_config.max_address, 6);
+                    // BYTESTOREAD * 4 for Longword
+                    blockread(f, buffer, BYTESTOREAD SHL 2);
                     if (IOResult < 128) then 
                     begin
                         if val = 0 then
@@ -242,7 +238,7 @@ procedure menu_flash;
                             buffer[1]:= flash2;    
                         end;
                         
-                        for i:= 0 to 255 do
+                        for i:= 0 to BYTESTOREAD - 1 do
                         begin
                             if (buffer[i] <> $ffffffff) then
                             begin
@@ -254,19 +250,17 @@ procedure menu_flash;
                     else begin
                         // error
                         read_input:= 1;
-                        WPrint(win_progress, 3, 7, WOFF, 'Error reading file  ');
+                        WPrint(win_progress, 3, 8, WOFF, 'Error reading file  ');
                         break;
                     end;
-                    Inc(val, 256);
+
+                    Inc(val, BYTESTOREAD);
                 until (val > pmax_config.max_address) or (IOResult = 3);
-                GProg(win_progress, 3, 6, 100);
+                // UpdateProgress(pmax_config.max_address, 6);
                 PMAX_WriteProtect(true);
                 close(f);
 
-                if read_input = 0 then 
-                begin
-                    WPrint(win_progress, 3, 7, WOFF, 'Completed             ');
-                end;
+                // FinishProgress;
             end
             else begin
                 WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
@@ -277,19 +271,10 @@ procedure menu_flash;
         end;
     end;
 begin
-    win_progress:= WOpen(7, 4, 26, 13, WOFF);
+    win_progress:= WOpen(7, 4, 26, 14, WOFF);
     WOrn(win_progress, WPTOP, WPLFT, 'CORE Flashing');
-    // WPrint(win_progress, 2,1,WOFF,'Read file');
     UpdateCore('D:CORE.BIN');
-    for i:=0 to 1 do
-    begin
-        WPrint(win_progress, WPCNT, 9 + i, WOFF, '                 ');    
-    end;
-    // WPrint(win_progress, WPCNT, 9, WOFF, '                 ');
-    // WPrint(win_progress, WPCNT, 10, WOFF, '                 ');
-    WPrint(win_progress, WPCNT, 11, WON, '[  OK  ]');
-    WaitKCX(WOFF);
-    WClose(win_progress);
+    FinishProgress;
 end;
 
 procedure menu_verify;    
@@ -302,13 +287,13 @@ procedure menu_verify;
         WPrint(win_progress, 8, 2, WOFF, filename);
         if FileExists(filename) then
         begin
+            WPrint(win_progress, 2, 3, WOFF, 'Core ver:');
+            WPrint(win_progress, 11, 3, WOFF, pmax_version);
             if VerifyFile(filename) then
-            begin
+            begin    
+                WPrint(win_progress, 2, 4, WOFF, 'File ver:');
+                WPrint(win_progress, 11, 4, WOFF, file_version);
 
-                WPrint(win_progress, 2, 3, WOFF, 'File ver:');
-                WPrint(win_progress, 11, 3, WOFF, file_version);
-                WPrint(win_progress, 2, 4, WOFF, 'Core ver:');
-                WPrint(win_progress, 11, 4, WOFF, pmax_version);
                 WPrint(win_progress, WPCNT, 10, WOFF, '   Please wait   ');
 
                 flash1:= PMAX_ReadFlash(0, 0);
@@ -324,18 +309,9 @@ procedure menu_verify;
 
                 val:= 0;
                 repeat
-                    i:=((val * 100) div pmax_config.max_address);
-                    if (val mod 10) = 0 then
-                    begin
-                        // reused string variable
-                        file_version:= Concat(ByteToStr(i),' %');
-                        memflash:= PMAX_ReadFlash(val + i, 0);
-                        WPrint(win_progress, WPCNT, 6, WOFF, file_version);
-                        GProg(win_progress, 3, 7, i);
-                        WPrint(win_progress, 18, 8, WOFF, HexStr(val, 5));
-                    end;
                     // BYTESTOREAD * 4 for Longword
-                    blockread(f, buffer, 1024);
+                    UpdateProgress(pmax_config.max_address, 6);
+                    blockread(f, buffer, BYTESTOREAD SHL 2);
                     if (IOResult < 128) then 
                     begin
                         if val = 0 then
@@ -369,18 +345,12 @@ procedure menu_verify;
                         WPrint(win_progress, 3, 8, WOFF, 'Error reading file  ');
                         break;
                     end;
+                    
                     if read_input <> 0 then break;
                     Inc(val, BYTESTOREAD);
                 until (val > pmax_config.max_address) or (IOResult = 3);
                 close(f);
-
-                if read_input = 0 then 
-                begin
-                    WPrint(win_progress, WPCNT, 6, WOFF, '100 %');
-                    GProg(win_progress, 3, 7, 100);
-                    WPrint(win_progress, 3, 8, WOFF, 'Completed             ');
-                    WPrint(win_progress, WPCNT, 10, WOFF, '           ');
-                end;
+                // UpdateProgress(pmax_config.max_address, 6);
             end
             else begin
                 WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
@@ -394,16 +364,7 @@ begin
     win_progress:= WOpen(7, 4, 26, 14, WOFF);
     WOrn(win_progress, WPTOP, WPLFT, 'CORE Verify');
     VerifyCore('D:CORE.BIN');
-
-    // for i:=0 to 1 do
-    // begin
-    //     WPrint(win_progress, 3, 9 + i, WOFF, '                    ');    
-    // end;
-    // WPrint(win_progress, WPCNT, 9, WOFF, '                 ');
-    // WPrint(win_progress, WPCNT, 10, WOFF, '                 ');
-    WPrint(win_progress, WPCNT, 12, WON, '[  OK  ]');
-    WaitKCX(WOFF);
-    WClose(win_progress);
+    FinishProgress;
 end;
 
 // function menu_file: Boolean;
@@ -553,7 +514,6 @@ end;
 
 // end;
 
-// procedure read_dir(drive: String[3]);
 
 procedure menu_about;
 var
@@ -1316,11 +1276,8 @@ begin
     WOrn(win_main, WPTOP, WPCNT, version);
     {$IFDEF DEBUG}
     PMAX_present:= true;
-    // pmax_config.pagesize:=1024;
-    // pmax_config.max_address:=$19800;
     pmax_config.pagesize:=512;
     pmax_config.max_address:=$e600;
-    
     pmax_version:= '123M08QP';
     {$ELSE}
     PMAX_present:= PMAX_Detect;
@@ -1335,7 +1292,7 @@ begin
     {$ENDIF}
     win_details:=WOpen(0, 19, 40, 5, WOFF);
     WOrn(win_details, WPTOP, WPLFT, 'Details');
-    WOrn(win_details, WPTOP,WPRGT, IntToStr(pmax_config.pagesize));
+    // WOrn(win_details, WPTOP,WPRGT, IntToStr(pmax_config.pagesize));
 
     while not status_end do
     begin
