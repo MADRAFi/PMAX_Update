@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v.0.15';
+    VERSION = 'PokeyMAX Update v.0.20';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -31,6 +31,7 @@ const
     string_confirm = 'Are you sure?';
 
 var
+
     win_main, win_details, win_progress: Byte;  // opend window handles on main screen
     selected_menu: Byte;                        // which menu is current
     status_end: Boolean;                        // flag to indicate application is going to close
@@ -43,6 +44,7 @@ var
     i: Byte;
     pmax_version: String[8];
     file_version: String[8];
+    core_file: String[15];
     f: File;
 
 function convert_bool(value: Boolean): String;
@@ -86,15 +88,14 @@ begin
         GProg(win_progress, 3, baW.bH[win_progress] - 7, 100);
         WPrint(win_progress, 3, baW.bH[win_progress] - 6, WOFF, 'Completed     ');
         WPrint(win_progress, 18, baW.bH[win_progress] - 6, WOFF, '     ');
-        
-    end;
-    for i:= 3 to 4 do
-    begin
-        WPrint(win_progress, WPCNT, baW.bH[win_progress] - i, WOFF, '                    ');    
+        for i:= 3 to 4 do
+        begin
+            WPrint(win_progress, WPCNT, baW.bH[win_progress] - i, WOFF, '                    ');    
+        end;        
     end;
     WPrint(win_progress, WPCNT, baW.bH[win_progress] - 2, WON, '[  OK  ]');
     WaitKCX(WOFF);
-    WClose(win_progress);
+    // WClose(win_progress);
 end;
 
 procedure FlashSaveConfig;
@@ -145,6 +146,23 @@ begin
     end;
     PMAX_WriteProtect(true);
     FinishProgress;
+    WClose(win_progress);
+end;
+
+procedure FinishConfig;
+begin
+    if status_close = 1 then
+    begin    
+        if GConfirm(string_confirm) then
+        begin
+            PMAX_WriteConfig;
+            if PMAX_isFlashPresent then
+            begin
+                status_close:= XESC;
+                FlashSaveConfig;
+            end;
+        end;
+    end;
 end;
 
 
@@ -185,20 +203,216 @@ begin
     end;
 end;
 
+// function menu_file: Boolean;
+// const
+//     list_drives: array[0..7] of string = ('D1:', 'D2:', 'D3:', 'D4:', 'D5:', 'D6:', 'D7:', 'D8:');
+//     buttons : array[0..1] of string = ('[  OK  ]', '[Cancel]');
+    
+//     FILENAME_SIZE = 12;
+
+// var
+//     // win_file: Byte;
+// //     // list_files: array[0..9] of string = ('FILE.XEX', 'FILE2.TXT', 'FILE3.DAT', 'CORE.BIN', 'FILE555.BIN', 'FILE6.BIN', 'FILE77.BIN', 'FILE8.BIN', 'FILE999.BIN', 'FILE101010.BIN');
+// //     list_files: array[0..128] of string[FILENAME_SIZE];
+// //     count_files: Byte = 0;
+//     selected_drive: Byte;
+//     // read_file: Byte;
+//     selected_file: String[FILENAME_SIZE];
+// //     selected_list: Byte;
+// //     // read_drive, read_list: Byte;
+    
+// //     tmp, i: Byte;    
+
+// // procedure read_dir;
+
+// // var
+// //     info : TSearchRec;
+// //     i: Byte;
+// //     // s: String[3];
+
+// // begin
+// //     // WOrn(win_file, WPBOT, WPRGT, CHBALL);
+// //     WOrn(win_file, WPBOT, WPRGT, ' O ');
+// //     if FindFirst(Concat(list_drives[selected_drive - 1],'*.BIN'), faAnyFile, info) = 0 then
+// //     // if FindFirst('D:*.BIN', faAnyFile, info) = 0 then
+// //     begin
+// //         i:= 1; // 0
+// //         repeat
+// //             // s:= ' O ';
+// //             // WOrn(win_file, WPBOT, WPRGT, CHO_L);
+// //             WOrn(win_file, WPBOT, WPRGT, ' . ');
+// //             list_files[i]:= Trim(info.Name);
+// //             Inc(i);
+// //             // WOrn(win_file, WPBOT, WPRGT, CHBALL);
+// //             WOrn(win_file, WPBOT, WPRGT, ' O ');
+// //         until FindNext(info) <> 0;
+// //         FindClose(info);
+// //         count_files:= i - 1;
+// //     end;
+// //     WOrn(win_file, WPBOT, WPRGT, '   ');
+// // end;
+
+// begin
+//     Result:= false;
+//     selected_drive:=1;
+//     selected_file:='CORE.BIN    ';
+// //     selected_list:=1;
+    
+//     // win_file:=WOpen(5, 4, 30, 16, WOFF);
+//     // win_progress:= WOpen(7, 4, 26, 14, WOFF);
+//     WOrn(win_progress, WPTOP, WPLFT, 'Choose a file');
+// //     WOrn(win_progress, WPBOT, WPRGT, '   ');
+
+// //     read_dir;
+
+// //     if (count_files > 0) then
+// //     begin
+// //         selected_file:= list_files[selected_list - 1];
+// //         tmp:= Length(selected_file);
+// //         SetLength(selected_file, FILENAME_SIZE);
+// //         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
+// //     end
+// //     else selected_file:='            ';
+
+
+
+//     WPrint(win_progress, 2, 2, WOFF, 'Drive:');
+//     GCombo(win_progress, 2, 3, GDISP, selected_drive, 8, list_drives);
+//     WPrint(win_progress, 12, 2, WOFF, 'File:');
+//     WPrint(win_progress, 12, 3, WOFF, selected_file); 
+// //     // WPrint(win_progress, 2, 4, WOFF, 'List:');
+// //     // if count_files > 0 then 
+// //     //     GList(win_progress, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+
+//     GButton(win_progress, 5, 12, GHORZ, GDISP, 2, buttons);
+    
+//     repeat
+//         // Drives combo
+//         read_input:= GCombo(win_progress, 2, 3, GEDIT, selected_drive, 8, list_drives);
+//         remember_input(selected_drive);
+//         // if status_close = XESC then break;
+//         GCombo(win_progress, 2, 3, GDISP, selected_drive, 8, list_drives);
+
+//         // file
+//         read_input:= GInput(win_progress, 12, 3, GFILE, 12, selected_file);
+//         if (read_input = XESC) then
+//         begin
+//             status_close:= XESC;
+//             break;
+//         end;    
+//         // if (read_input <> XESC) and (count_files > 0) then
+//         // begin
+//         //     for i:=0 to count_files - 1 do
+//         //     begin
+//         //         if list_files[i] = Trim(selected_file) then
+//         //         begin
+//         //             selected_list:= i + 1;
+//         //             GList(win_progress, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+//         //         end;
+//         //     end; 
+//         // end;
+// //         // Files List
+// //         // if (count_files > 0) then 
+// //         // begin
+// //         //     read_input:= GList(win_progress, 2, 5, GEDIT, selected_list, 8, count_files, list_files);
+// //         //     if (read_input <> XESC) then
+// //         //     begin
+// //         //         selected_list := read_input;
+// //         //         selected_file:= list_files[selected_list - 1];
+// //         //         tmp:= Length(selected_file);
+// //         //         SetLength(selected_file, FILENAME_SIZE);
+// //         //         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
+// //         //         WPrint(win_progress, 8, 2, WOFF, selected_file);
+// //         //     end
+// //         //     else if (read_input = XESC) then
+// //         //     begin
+// //         //         status_close:= XESC;
+// //         //         break;
+// //         //     end;
+            
+// //         //     GList(win_progress, 2, 5, GDISP, selected_list, 8, count_files, list_files);
+// //         // end;
+
+//         // Buttons to confirm
+//         status_close := GButton(win_progress, 5, 12, GHORZ, GEDIT, 2, buttons);    
+//         GButton(win_progress, 5, 12, GHORZ, GDISP, 2, buttons);
+
+//     until status_close <> XTAB;
+
+//     if status_close = 1 then
+//     begin
+//         Result:=true;
+//         core_file:= Concat(list_drives[selected_drive - 1], selected_file);
+//     end;
+// end;
+
+
+function menu_file: Boolean;
+const
+    list_drives: array[0..7] of string = ('D1:', 'D2:', 'D3:', 'D4:', 'D5:', 'D6:', 'D7:', 'D8:');
+    buttons : array[0..1] of string = ('[  OK  ]', '[Cancel]');    
+    FILENAME_SIZE = 12;
+
+var
+    selected_drive: Byte;
+    selected_file: String[FILENAME_SIZE];
+
+begin
+    Result:= false;
+    selected_drive:=1;
+    selected_file:='CORE.BIN    ';
+
+    WOrn(win_progress, WPTOP, WPLFT, 'Choose a file');
+
+
+    WPrint(win_progress, 2, 2, WOFF, 'Drive:');
+    GCombo(win_progress, 2, 3, GDISP, selected_drive, 8, list_drives);
+    WPrint(win_progress, 12, 2, WOFF, 'File:');
+    WPrint(win_progress, 12, 3, WOFF, selected_file); 
+
+    GButton(win_progress, 5, 12, GHORZ, GDISP, 2, buttons);
+    
+    repeat
+        // Drives combo
+        read_input:= GCombo(win_progress, 2, 3, GEDIT, selected_drive, 8, list_drives);
+        remember_input(selected_drive);
+        // if status_close = XESC then break;
+        GCombo(win_progress, 2, 3, GDISP, selected_drive, 8, list_drives);
+
+        // file
+        read_input:= GInput(win_progress, 12, 3, GFILE, 12, selected_file);
+        if (read_input = XESC) then
+        begin
+            status_close:= XESC;
+            break;
+        end;
+
+        // Buttons to confirm
+        status_close := GButton(win_progress, 5, 12, GHORZ, GEDIT, 2, buttons);    
+        GButton(win_progress, 5, 12, GHORZ, GDISP, 2, buttons);
+
+    until status_close <> XTAB;
+
+    if status_close = 1 then
+    begin
+        Result:=true;
+        core_file:= Concat(list_drives[selected_drive - 1], selected_file);
+    end;
+end;
 procedure menu_flash;
     procedure UpdateCore(filename: String[15]);
 
     begin
         WPrint(win_progress, 2, 2, WOFF, 'File:');
         WPrint(win_progress, 8, 2, WOFF, filename);
+        WPrint(win_progress, 2, 3, WOFF, 'Core ver:');
+        WPrint(win_progress, 11, 3, WOFF, pmax_version);
         if FileExists(filename) then
         begin
-            WPrint(win_progress, 2, 4, WOFF, 'Core ver:');
-            WPrint(win_progress, 11, 4, WOFF, pmax_version);
             if VerifyFile(filename) then
             begin
-                WPrint(win_progress, 2, 3, WOFF, 'File ver:');
-                WPrint(win_progress, 11, 3, WOFF, file_version);
+                WPrint(win_progress, 2, 4, WOFF, 'File ver:');
+                WPrint(win_progress, 11, 4, WOFF, file_version);
 
                 WPrint(win_progress, WPCNT, 9, WOFF, '   Please wait   ');
                 WPrint(win_progress, WPCNT, 10, WON, ' DO NOT TURN OFF ');
@@ -273,8 +487,16 @@ procedure menu_flash;
 begin
     win_progress:= WOpen(7, 4, 26, 14, WOFF);
     WOrn(win_progress, WPTOP, WPLFT, 'CORE Flashing');
-    UpdateCore('D:CORE.BIN');
-    FinishProgress;
+    if menu_file then
+    begin
+        if GConfirm(string_confirm) then
+        begin
+            WClr(win_progress);
+            UpdateCore(core_file);
+            FinishProgress;
+        end;
+    end;
+    WClose(win_progress);
 end;
 
 procedure menu_verify;    
@@ -285,10 +507,10 @@ procedure menu_verify;
     begin
         WPrint(win_progress, 2, 2, WOFF, 'File:');
         WPrint(win_progress, 8, 2, WOFF, filename);
+        WPrint(win_progress, 2, 3, WOFF, 'Core ver:');
+        WPrint(win_progress, 11, 3, WOFF, pmax_version);
         if FileExists(filename) then
         begin
-            WPrint(win_progress, 2, 3, WOFF, 'Core ver:');
-            WPrint(win_progress, 11, 3, WOFF, pmax_version);
             if VerifyFile(filename) then
             begin    
                 WPrint(win_progress, 2, 4, WOFF, 'File ver:');
@@ -363,157 +585,17 @@ procedure menu_verify;
 begin
     win_progress:= WOpen(7, 4, 26, 14, WOFF);
     WOrn(win_progress, WPTOP, WPLFT, 'CORE Verify');
-    VerifyCore('D:CORE.BIN');
-    FinishProgress;
+    if menu_file then
+    begin
+        if GConfirm(string_confirm) then
+        begin
+            WClr(win_progress);
+            VerifyCore(core_file);
+            FinishProgress;
+        end;
+    end;
+    WClose(win_progress);
 end;
-
-// function menu_file: Boolean;
-// const
-//     list_drives: array[0..7] of string = ('D1:', 'D2:', 'D3:', 'D4:', 'D5:', 'D6:', 'D7:', 'D8:');
-//     buttons : array[0..1] of string = ('[  OK  ]', '[Cancel]');
-    
-//     FILENAME_SIZE = 12;
-
-// var
-//     win_file: Byte;
-//     // list_files: array[0..9] of string = ('FILE.XEX', 'FILE2.TXT', 'FILE3.DAT', 'CORE.BIN', 'FILE555.BIN', 'FILE6.BIN', 'FILE77.BIN', 'FILE8.BIN', 'FILE999.BIN', 'FILE101010.BIN');
-//     list_files: array[0..128] of string[FILENAME_SIZE];
-//     count_files: Byte = 0;
-//     selected_drive: Byte;
-//     read_file: Byte;
-//     selected_file: String[FILENAME_SIZE];
-//     selected_list: Byte;
-//     // read_drive, read_list: Byte;
-    
-//     tmp, i: Byte;    
-
-// procedure read_dir;
-
-// var
-//     info : TSearchRec;
-//     i: Byte;
-//     // s: String[3];
-
-// begin
-//     // WOrn(win_file, WPBOT, WPRGT, CHBALL);
-//     WOrn(win_file, WPBOT, WPRGT, ' O ');
-//     if FindFirst(Concat(list_drives[selected_drive - 1],'*.BIN'), faAnyFile, info) = 0 then
-//     // if FindFirst('D:*.BIN', faAnyFile, info) = 0 then
-//     begin
-//         i:= 1; // 0
-//         repeat
-//             // s:= ' O ';
-//             // WOrn(win_file, WPBOT, WPRGT, CHO_L);
-//             WOrn(win_file, WPBOT, WPRGT, ' . ');
-//             list_files[i]:= Trim(info.Name);
-//             Inc(i);
-//             // WOrn(win_file, WPBOT, WPRGT, CHBALL);
-//             WOrn(win_file, WPBOT, WPRGT, ' O ');
-//         until FindNext(info) <> 0;
-//         FindClose(info);
-//         count_files:= i - 1;
-//     end;
-//     WOrn(win_file, WPBOT, WPRGT, '   ');
-// end;
-
-// begin
-//     Result:= false;
-//     selected_drive:=1;
-//     selected_list:=1;
-    
-//     win_file:=WOpen(5, 4, 30, 16, WOFF);
-//     WOrn(win_file, WPTOP, WPLFT, 'Choose a file');
-//     WOrn(win_file, WPBOT, WPRGT, '   ');
-
-//     read_dir;
-
-//     if (count_files > 0) then
-//     begin
-//         selected_file:= list_files[selected_list - 1];
-//         tmp:= Length(selected_file);
-//         SetLength(selected_file, FILENAME_SIZE);
-//         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
-//     end
-//     else selected_file:='            ';
-//     WPrint(win_file, 2, 2, WOFF, 'File:');
-//     // WDiv(win_file, 3, WON);
-
-//     WPrint(win_file, 21, 4, WOFF, 'Drive:');
-//     GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
-    
-//     // WPrint(win_file, 2, 4, WOFF, 'List:');
-//     // if count_files > 0 then 
-//     //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-
-//     GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
-    
-//     repeat
-//         // file
-//         read_input:= GInput(win_file, 8, 2, GFILE, 12, selected_file);
-//         // if (read_input <> XESC) and (count_files > 0) then
-//         // begin
-//         //     for i:=0 to count_files - 1 do
-//         //     begin
-//         //         if list_files[i] = Trim(selected_file) then
-//         //         begin
-//         //             selected_list:= i + 1;
-//         //             GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-//         //         end;
-//         //     end; 
-//         // end;
-
-//         // Drives combo
-//         read_input:= GCombo(win_file, 21, 5, GEDIT, selected_drive, 8, list_drives);
-//         if (read_input <> XESC) then
-//         begin
-//             selected_drive := read_input;
-//         end
-//         else if (read_input = XESC) then
-//         begin
-//             status_close:= XESC;
-//             break;
-//         end;
-        
-//         GCombo(win_file, 21, 5, GDISP, selected_drive, 8, list_drives);
-
-//         // Files List
-//         // if (count_files > 0) then 
-//         // begin
-//         //     read_input:= GList(win_file, 2, 5, GEDIT, selected_list, 8, count_files, list_files);
-//         //     if (read_input <> XESC) then
-//         //     begin
-//         //         selected_list := read_input;
-//         //         selected_file:= list_files[selected_list - 1];
-//         //         tmp:= Length(selected_file);
-//         //         SetLength(selected_file, FILENAME_SIZE);
-//         //         FillChar(@selected_file[tmp + 1], FILENAME_SIZE - tmp, CHSPACE );
-//         //         WPrint(win_file, 8, 2, WOFF, selected_file);
-//         //     end
-//         //     else if (read_input = XESC) then
-//         //     begin
-//         //         status_close:= XESC;
-//         //         break;
-//         //     end;
-            
-//         //     GList(win_file, 2, 5, GDISP, selected_list, 8, count_files, list_files);
-//         // end;
-
-//         // Buttons to confirm
-//         status_close := GButton(win_file, 19, 11, GVERT, GEDIT, 2, buttons);    
-//         GButton(win_file, 19, 11, GVERT, GDISP, 2, buttons);
-
-//     until status_close <> XTAB;
-
-//     if status_close = 1 then
-//     begin
-//         Result:=true;
-//         GAlert(Concat(Concat('Processing...', list_drives[selected_drive - 1]), selected_file));
-//     end;
-
-//       WClose(win_file);
-
-// end;
-
 
 procedure menu_about;
 var
@@ -562,7 +644,7 @@ var
     // selected_sid, selected_psg, selected_covox: Byte;
     // read_sid, read_psg, read_covox: Byte;
 
-    selected_option: Byte;
+    // selected_option: Byte;
     // read_option: Byte;
 
     // status_close: Byte;
@@ -627,19 +709,12 @@ begin
         // end;
     until status_close <> XTAB;
 
-    if status_close = 1 then
-    begin
-        Result:=true;
-        if GConfirm(string_confirm) then
-        begin
-            PMAX_WriteConfig;
-            if PMAX_isFlashPresent then
-            begin
-                status_close:= XESC;
-                FlashSaveConfig;
-            end;
-        end;
-    end;
+    // if status_close = 1 then
+    // begin
+    //     Result:=true;
+    //     FinishConfig;
+    // end;
+    FinishConfig;
     WClose(win_mode);
 end;
 
@@ -837,20 +912,12 @@ begin
 
     until status_close <> XTAB;
 
-    if status_close = 1 then
-    begin
-        Result:=true;
-        if GConfirm(string_confirm) then
-        begin
-            PMAX_WriteConfig;
-            if PMAX_isFlashPresent then
-            begin
-                status_close:= XESC;
-                FlashSaveConfig;
-            end;
-        end;
-    end;
-
+    // if status_close = 1 then
+    // begin
+    //     Result:=true;
+    //     FinishConfig;
+    // end;
+    FinishConfig;
     WClose(win_core);
 end;
 
@@ -920,20 +987,12 @@ begin
 
     until status_close <> XTAB;
 
-    if status_close = 1 then
-    begin
-        Result:=true;
-        if GConfirm(string_confirm) then
-        begin
-            PMAX_WriteConfig;
-            if PMAX_isFlashPresent then
-            begin
-                status_close:= XESC;
-                FlashSaveConfig;
-            end;
-        end;
-    end;
-
+    // if status_close = 1 then
+    // begin
+    //     Result:=true;
+    //     FinishConfig;
+    // end;
+    FinishConfig;
     WClose(win_pokey);
 end;
 
@@ -990,20 +1049,12 @@ begin
 
     until status_close <> XTAB;
 
-    if status_close = 1 then
-    begin
-        Result:=true;
-        if GConfirm(string_confirm) then
-        begin
-            PMAX_WriteConfig;
-            if PMAX_isFlashPresent then
-            begin
-                status_close:= XESC;
-                FlashSaveConfig;
-            end;
-        end;
-    end;
-
+    // if status_close = 1 then
+    // begin
+    //     Result:=true;
+    //     FinishConfig;
+    // end;
+    FinishConfig;
     WClose(win_sid);
 end;
 
@@ -1085,20 +1136,12 @@ begin
 
     until status_close <> XTAB;
 
-    if status_close = 1 then
-    begin
-        Result:=true;
-        if GConfirm(string_confirm) then
-        begin
-            PMAX_WriteConfig;
-            if PMAX_isFlashPresent then
-            begin
-                status_close:= XESC;
-                FlashSaveConfig;
-            end;
-        end;
-    end;
-
+    // if status_close = 1 then
+    // begin
+    //     Result:=true;
+    //     FinishConfig;
+    // end;
+    FinishConfig;
     WClose(win_psg);
 end;
 
@@ -1312,7 +1355,5 @@ begin
     if PMAX_present then PMAX_EnableConfig(false);
     WClose(win_details);
     WClose(win_main);
-    // asm {
-    //     jmp $a
-    // };
+    ClrScr;
 end.
