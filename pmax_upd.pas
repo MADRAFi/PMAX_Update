@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v.0.40';
+    VERSION = 'PokeyMAX Update v.0.50';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -1005,12 +1005,12 @@ var
     selected: Byte;
 
 const
-    menu_pmax: array[0..2] of string = (' Flash  ', ' Verify ', ' Exit   ');
+    menu_pmax: array[0..3] of string = (' Flash    ', ' Verify   ', ' Defaults ', ' Exit     ');
 
 begin
     status_close:= 0;
     selected:= 1;
-    win_pokeymax:=WOpen(1, 2, 10, 5, WOFF);
+    win_pokeymax:=WOpen(1, 2, 12, 6, WOFF);
 
     while status_close<>XESC do
     begin
@@ -1031,7 +1031,54 @@ begin
                         menu_flash(FLASH_VERIFY);
                     end;
                 end;
-            3: begin
+            3:  begin
+                    if PMAX_present then
+                    begin
+                        status_close:= XESC;
+                        if GConfirm(string_confirm) then
+                        begin
+                            case PMAX_GetPokeys of
+                                1: pmax_config.mode_pokey:=1;
+                                2: pmax_config.mode_pokey:=2;
+                                4: pmax_config.mode_pokey:=3;
+                            end;
+                            pmax_config.mode_sid:= Byte(PMAX_isSIDPresent);
+                            pmax_config.mode_psg:= Byte(PMAX_isPSGPresent);
+                            pmax_config.mode_covox:= Byte(PMAX_isCovoxPresent);
+                            pmax_config.mode_mono:= 2;
+                            pmax_config.mode_phi:= 2;
+                            pmax_config.core_div1:= 2;
+                            pmax_config.core_div2:= 2;
+                            pmax_config.core_div3:= 2;
+                            pmax_config.core_div4:= 2;
+                            pmax_config.core_gtia1:= 0;
+                            pmax_config.core_gtia2:= 0;
+                            pmax_config.core_gtia3:= 1;
+                            pmax_config.core_gtia4:= 1;
+                            pmax_config.core_out1:= 1;
+                            pmax_config.core_out2:= 1;
+                            pmax_config.core_out3:= 1;
+                            pmax_config.core_out4:= 1;
+                            pmax_config.core_out5:= 1;
+                            pmax_config.pokey_mixing:= 2;
+                            pmax_config.pokey_channel:= 1;
+                            pmax_config.pokey_irq:= 1;
+                            pmax_config.psg_freq:= 1;
+                            pmax_config.psg_stereo:= 2;
+                            pmax_config.psg_envelope:= 1;
+                            pmax_config.psg_volume:= 1;
+                            pmax_config.sid_1:= 1;
+                            pmax_config.sid_2:= 1;
+                            PMAX_WriteConfig;
+                            if PMAX_isFlashPresent then
+                            begin
+                                status_close:= XESC;
+                                FlashSaveConfig;
+                            end;
+                        end;
+                    end;
+                end;
+            4: begin
                     status_end:= true;
                     status_close:= XESC;
                end;
