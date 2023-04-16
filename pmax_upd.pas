@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v.0.30';
+    VERSION = 'PokeyMAX Update v.0.40';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -99,6 +99,7 @@ begin
     // WClose(win_progress);
 end;
 
+
 procedure FlashSaveConfig;
 begin
     win_progress:=WOpen(7, 7, 26, 10, WOFF);
@@ -165,7 +166,6 @@ begin
         end;
     end;
 end;
-
 
 function VerifyFile(filename : String[15]): Boolean;
 var
@@ -363,8 +363,7 @@ begin
     selected_drive:=1;
     selected_file:='CORE.BIN    ';
 
-    WOrn(win_progress, WPTOP, WPLFT, 'Choose a file');
-
+    WOrn(win_progress, WPTOP, WPLFT, 'CORE File');
 
     WPrint(win_progress, 2, 2, WOFF, 'Drive:');
     GCombo(win_progress, 2, 3, GDISP, selected_drive, 8, list_drives);
@@ -415,9 +414,9 @@ begin
             WPrint(win_progress, 2, 4, WOFF, 'File ver:');
             WPrint(win_progress, 11, 4, WOFF, file_version);
 
-            WPrint(win_progress, WPCNT, 9, WOFF, '   Please wait   ');
+            WPrint(win_progress, WPCNT, 10, WOFF, '   Please wait   ');
             if mode = FLASH_CORE then
-                WPrint(win_progress, WPCNT, 10, WON, ' DO NOT TURN OFF ');          // +
+                WPrint(win_progress, WPCNT, 11, WON, ' DO NOT TURN OFF ');          // +
 
             flash1:= PMAX_ReadFlash(0, 0);
             flash2:= PMAX_ReadFlash(1, 0);
@@ -492,12 +491,19 @@ begin
                     WPrint(win_progress, 3, 8, WOFF, 'Error reading file  ');
                     break;
                 end;
-
+                if read_input <> 0 then break;
                 Inc(val, BYTESTOREAD);
             until (val > pmax_config.max_address) or (IOResult = 3);
             close(f);
             if mode = FLASH_CORE then
+            begin
                 PMAX_WriteProtect(true);
+                if read_input = 0 then
+                begin
+                    pmax_version:=file_version;
+                    WPrint(win_details, 7, 1, WOFF, pmax_version);
+                end;
+            end;
         end
         else begin
             WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
@@ -508,235 +514,29 @@ begin
     end;
 end;
 
-
-// procedure UpdateCore(filename: String[15]);
-
-// begin
-//     WPrint(win_progress, 2, 2, WOFF, 'File:');
-//     WPrint(win_progress, 8, 2, WOFF, filename);
-//     WPrint(win_progress, 2, 3, WOFF, 'Core ver:');
-//     WPrint(win_progress, 11, 3, WOFF, pmax_version);
-//     if FileExists(filename) then
-//     begin
-//         if VerifyFile(filename) then
-//         begin
-//             WPrint(win_progress, 2, 4, WOFF, 'File ver:');
-//             WPrint(win_progress, 11, 4, WOFF, file_version);
-
-//             WPrint(win_progress, WPCNT, 9, WOFF, '   Please wait   ');
-//             WPrint(win_progress, WPCNT, 10, WON, ' DO NOT TURN OFF ');          // +
-
-//             flash1:= PMAX_ReadFlash(0, 0);
-//             flash2:= PMAX_ReadFlash(1, 0);
-
-//             WPrint(win_progress, 1, 7, WOFF, ' (');
-//             WPrint(win_progress, 23, 7, WOFF, ') ');
-//             PMAX_WriteProtect(false);                                           // +
-//             WPrint(win_progress, 3, 8, WOFF, 'Erasing sector');
-//             WPrint(win_progress, 20, 8, WOFF, '    ');
-//             for i:=1 to 4 do
-//             begin
-//                 // i * 25
-//                 GProg(win_progress, 3, 7, (i SHL 5) - i);
-//                 WPrint(win_progress, 20, 8, WOFF, ByteToStr(i));
-//                 PMAX_EraseSector(i);
-//             end;                                                                // +
-//             assign(f, filename);
-//             reset(f, 1);
-//             // error indocator
-//             read_input:= 0;
-//             // GProg(win_progress, 3, 7, 0);
-//             WPrint(win_progress, 3, 8, WOFF, 'Flashing            ');
-//             val:= 0;
-//             repeat
-//                     UpdateProgress(pmax_config.max_address, 6);
-//                 // BYTESTOREAD * 4 for Longword
-//                 blockread(f, buffer, BYTESTOREAD SHL 2);
-//                 if (IOResult < 128) then 
-//                 begin
-//                     if val = 0 then
-//                     begin
-//                     // restore config
-//                         buffer[0]:= flash1;
-//                         buffer[1]:= flash2;    
-//                     end;
-                    
-//                     for i:= 0 to BYTESTOREAD - 1 do
-//                     begin
-//                         if (buffer[i] <> $ffffffff) then
-//                         begin
-//                             PMAX_WriteFlash(val + i, 0, buffer[i]);
-//                         end;
-//                     end;
-
-//                 end
-//                 else begin
-//                     // error
-//                     read_input:= 1;
-//                     WPrint(win_progress, 3, 8, WOFF, 'Error reading file  ');
-//                     break;
-//                 end;
-
-//                 Inc(val, BYTESTOREAD);
-//             until (val > pmax_config.max_address) or (IOResult = 3);
-//             // UpdateProgress(pmax_config.max_address, 6);
-//             PMAX_WriteProtect(true);
-//             close(f);
-
-//             // FinishProgress;
-//         end
-//         else begin
-//             WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
-//         end;
-//     end
-//     else begin
-//         WPrint(win_progress, WPCNT, 4, WON, '    File not found!     ');
-//     end;
-// end;
-
-// procedure VerifyCore(filename: String[15]);
-// var
-//     memflash: LongWord;
-
-// begin
-//     WPrint(win_progress, 2, 2, WOFF, 'File:');
-//     WPrint(win_progress, 8, 2, WOFF, filename);
-//     WPrint(win_progress, 2, 3, WOFF, 'Core ver:');
-//     WPrint(win_progress, 11, 3, WOFF, pmax_version);
-//     if FileExists(filename) then
-//     begin
-//         if VerifyFile(filename) then
-//         begin    
-//             WPrint(win_progress, 2, 4, WOFF, 'File ver:');
-//             WPrint(win_progress, 11, 4, WOFF, file_version);
-
-//             WPrint(win_progress, WPCNT, 10, WOFF, '   Please wait   ');     // mved to 9 row
-
-//             flash1:= PMAX_ReadFlash(0, 0);
-//             flash2:= PMAX_ReadFlash(1, 0);
-//             WPrint(win_progress, 1, 7, WOFF, ' (');
-//             WPrint(win_progress, 23, 7, WOFF, ') ');
-
-//             assign(f, filename);
-//             reset(f, 1);
-//             // error indocator
-//             read_input:= 0;
-//             WPrint(win_progress, 3, 8, WOFF, 'Verifying           ');
-
-//             val:= 0;
-//             repeat
-//                 UpdateProgress(pmax_config.max_address, 6);
-//                 // BYTESTOREAD * 4 for Longword
-//                 blockread(f, buffer, BYTESTOREAD SHL 2);
-//                 if (IOResult < 128) then 
-//                 begin
-//                     if val = 0 then
-//                     begin
-//                     // restore config
-//                         buffer[0]:= flash1;
-//                         buffer[1]:= flash2;
-//                     end;
-                    
-//                     for i:= 0 to BYTESTOREAD - 1  do
-//                     begin
-//                         memflash:= PMAX_ReadFlash(val + i, 0);
-//                         if (buffer[i] <> memflash) then
-//                         begin
-//                             read_input:= 2;
-//                             WPrint(win_progress, 3, 8, WOFF, 'Error at            ');
-//                             WPrint(win_progress, 18, 8, WOFF, HexStr(val + i, 5));
-
-//                             WPrint(win_progress, 3, 9, WOFF, 'Disk:               ');
-//                             WPrint(win_progress, 18, 9, WOFF, HexStr(buffer[i], 5));
-//                             WPrint(win_progress, 3, 10, WOFF, 'Flash:               ');
-//                             WPrint(win_progress, 18, 10, WOFF, HexStr(memflash, 5));
-//                             break;
-//                         end;
-//                     end;
-
-//                 end
-//                 else begin
-//                     // error
-//                     read_input:= 1;
-//                     WPrint(win_progress, 3, 8, WOFF, 'Error reading file  ');
-//                     break;
-//                 end;
-                
-//                 if read_input <> 0 then break;
-//                 Inc(val, BYTESTOREAD);
-//             until (val > pmax_config.max_address) or (IOResult = 3);
-//             close(f);
-//             // UpdateProgress(pmax_config.max_address, 6);
-//         end
-//         else begin
-//             WPrint(win_progress, WPCNT, 4, WON, '     Invalid Core     ');
-//         end;
-//     end
-//     else begin
-//         WPrint(win_progress, WPCNT, 4, WON, '    File not found!     ');
-//     end;
-// end;
-
 procedure menu_flash(mode: Byte);
 
 begin
     win_progress:= WOpen(7, 4, 26, 14, WOFF);
-    if mode = FLASH_VERIFY then
-        WOrn(win_progress, WPTOP, WPLFT, 'CORE Verify')
-    else
-        WOrn(win_progress, WPTOP, WPLFT, 'CORE Flashing');
-    
     if menu_file then
     begin
+        if mode = FLASH_VERIFY then
+            WOrn(win_progress, WPTOP, WPLFT, 'CORE Verify')
+        else
+            WOrn(win_progress, WPTOP, WPLFT, 'CORE Flash');
+
         if GConfirm(string_confirm) then
         begin
             WClr(win_progress);
             if mode = FLASH_VERIFY then
-                // VerifyCore(core_file)
                 ProcessCore(core_file, FLASH_VERIFY)
             else    
-                // UpdateCore(core_file);
                 ProcessCore(core_file, FLASH_CORE);
             FinishProgress;
         end;
     end;
     WClose(win_progress);
 end;
-
-// procedure menu_flash;
-
-// begin
-//     win_progress:= WOpen(7, 4, 26, 14, WOFF);
-//     WOrn(win_progress, WPTOP, WPLFT, 'CORE Flashing');
-//     if menu_file then
-//     begin
-//         if GConfirm(string_confirm) then
-//         begin
-//             WClr(win_progress);
-//             UpdateCore(core_file);
-//             FinishProgress;
-//         end;
-//     end;
-//     WClose(win_progress);
-// end;
-
-
-// procedure menu_verify;    
-    
-// begin
-//     win_progress:= WOpen(7, 4, 26, 14, WOFF);
-//     WOrn(win_progress, WPTOP, WPLFT, 'CORE Verify');
-//     if menu_file then
-//     begin
-//         if GConfirm(string_confirm) then
-//         begin
-//             WClr(win_progress);
-//             VerifyCore(core_file);
-//             FinishProgress;
-//         end;
-//     end;
-//     WClose(win_progress);
-// end;
 
 procedure menu_about;
 var
@@ -782,23 +582,11 @@ const
 var
     win_mode: Byte;
 
-    // selected_sid, selected_psg, selected_covox: Byte;
-    // read_sid, read_psg, read_covox: Byte;
-
-    // selected_option: Byte;
-    // read_option: Byte;
-
-    // status_close: Byte;
-
 begin
     Result:= false;
     status_close:= 0;
-    // selected_option:= pmax_config.mode_pokey;
-    // selected_sid:= Byte(pmax_config.mode_sid);
-    // selected_psg:= Byte(pmax_config.mode_psg);
-    // selected_covox:= Byte(pmax_config.mode_covox);
 
-    win_mode:=WOpen(8, 3, 24, 10, WOFF);
+    win_mode:=WOpen(8, 6, 24, 9, WOFF);
     WOrn(win_mode, WPTOP, WPLFT, ' MODE ');
 
     WPrint(win_mode, OPTION_POSX, OPTION_POSY - 1, WOFF, 'Option:');
@@ -850,11 +638,6 @@ begin
         // end;
     until status_close <> XTAB;
 
-    // if status_close = 1 then
-    // begin
-    //     Result:=true;
-    //     FinishConfig;
-    // end;
     FinishConfig;
     WClose(win_mode);
 end;
@@ -866,55 +649,22 @@ const
     core_divide: array[0..3] of string = (' 1 ', ' 2 ', ' 4 ', ' 8 ');
     core_phi: array[0..1] of string = ('NTSC (4/7)', 'PAL (5/9)');
 
-    BUTTONS_POSX = 16; BUTTONS_POSY = 16;
+    BUTTONS_POSX = 10; BUTTONS_POSY = 16;
     MONO_POSX = 2; MONO_POSY = 3;
     PHI_POSX = 19; PHI_POSY = 3;
-    DIV_POSX = 15; DIV_POSY = 8;
-    GTIA_POSX = 23; GTIA_POSY = 8;
-    OUT_POSX = 29; OUT_POSY = 8;
+    DIV_POSX = 15; DIV_POSY = 7;
+    GTIA_POSX = 23; GTIA_POSY = 7;
+    OUT_POSX = 29; OUT_POSY = 7;
 
 
 var
     win_core: Byte;
 
-    // selected_out1, selected_out2, selected_out3, selected_out4, selected_out5: Byte;
-    // read_out1, read_out2, read_out3, read_out4, read_out5: Byte;
-
-    // selected_gtia1, selected_gtia2, selected_gtia3, selected_gtia4: Byte;
-    // read_gtia1, read_gtia2, read_gtia3, read_gtia4: Byte;
-
-    // selected_div1, selected_div2, selected_div3, selected_div4: Byte;
-    // read_div1, read_div2, read_div3, read_div4: Byte;
-
-    // selected_mono, selected_phi: Byte;
-    // read_mono, read_phi: Byte;
-
-    // status_close: Byte;
-
 begin
     Result:= false;
     status_close:= 0;
-    
-    // selected_mono:=pmax_config.mode_mono;
-    // selected_phi:=pmax_config.mode_phi;
 
-    // selected_div1:=pmax_config.core_div1;
-    // selected_div2:=pmax_config.core_div2;
-    // selected_div3:=pmax_config.core_div3;
-    // selected_div4:=pmax_config.core_div4;
-
-    // selected_gtia1:=Byte(pmax_config.core_gtia1);
-    // selected_gtia2:=Byte(pmax_config.core_gtia2);
-    // selected_gtia3:=Byte(pmax_config.core_gtia3);
-    // selected_gtia4:=Byte(pmax_config.core_gtia4);
-
-    // selected_out1:=Byte(pmax_config.core_out1);
-    // selected_out2:=Byte(pmax_config.core_out2);
-    // selected_out3:=Byte(pmax_config.core_out3);
-    // selected_out4:=Byte(pmax_config.core_out4);
-    // selected_out5:=Byte(pmax_config.core_out5);
-
-    win_core:=WOpen(2, 3, 36, 19, WOFF);
+    win_core:=WOpen(2, 4, 36, 18, WOFF);
     WOrn(win_core, WPTOP, WPLFT, ' CORE ');
     
     WPrint(win_core, MONO_POSX, MONO_POSY - 1, WOFF, 'Mono:');
@@ -1053,11 +803,6 @@ begin
 
     until status_close <> XTAB;
 
-    // if status_close = 1 then
-    // begin
-    //     Result:=true;
-    //     FinishConfig;
-    // end;
     FinishConfig;
     WClose(win_core);
 end;
@@ -1065,16 +810,13 @@ end;
 function menu_pokey: Boolean;
 var
     win_pokey: Byte;
-    // read_mixing, read_channel, read_irq: Byte;
-    // selected_mixing, selected_channel, selected_irq: Byte;
-    // status_close: Byte;
 
 const  
     pokey_mixing: array[0..1] of string = ('Non-linear', 'Linear');
     pokey_channel: array[0..1] of string = ('Off', 'On');
     pokey_irq: array[0..1] of string = ('One', 'All');
 
-    BUTTONS_POSX = 12; BUTTONS_POSY = 10;
+    BUTTONS_POSX = 8; BUTTONS_POSY = 10;
     MIXING_POSX = 2; MIXING_POSY = 3;
     CHANNEL_POSX = 16; CHANNEL_POSY = 3;
     IRQ_POSX = 2; IRQ_POSY = 7;
@@ -1082,11 +824,8 @@ const
 begin
     Result:= false;
     status_close:= 0;
-    // selected_mixing:= pmax_config.pokey_mixing;
-    // selected_channel:= pmax_config.pokey_channel;
-    // selected_irq:= pmax_config.pokey_irq;
     
-    win_pokey:=WOpen(5, 4, 31, 13, WOFF);
+    win_pokey:=WOpen(5, 4, 31, 12, WOFF);
     WOrn(win_pokey, WPTOP, WPLFT, ' POKEY ');
     
 
@@ -1128,11 +867,6 @@ begin
 
     until status_close <> XTAB;
 
-    // if status_close = 1 then
-    // begin
-    //     Result:=true;
-    //     FinishConfig;
-    // end;
     FinishConfig;
     WClose(win_pokey);
 end;
@@ -1140,24 +874,19 @@ end;
 function menu_sid: Boolean;
 var
     win_sid: Byte;
-    // read_sid1, read_sid2: Byte;
-    // selected_sid1, selected_sid2: Byte;
-    // status_close: Byte;
 
 const  
     sid_options: array[0..2] of string = ('6581', '8580', '8580 Digi');
 
-    BUTTONS_POSX = 12; BUTTONS_POSY = 7;
+    BUTTONS_POSX = 7; BUTTONS_POSY = 7;
     SID1_POSX = 2; SID1_POSY = 3;
     SID2_POSX = 15; SID2_POSY = 3;
 
 begin
     Result:= false;
     status_close:= 0;
-    // selected_sid1:= pmax_config.sid_1;
-    // selected_sid2:= pmax_config.sid_2;
     
-    win_sid:=WOpen(5, 5, 30, 10, WOFF);
+    win_sid:=WOpen(5, 6, 30, 9, WOFF);
     WOrn(win_sid, WPTOP, WPLFT, ' SID ');
     
 
@@ -1190,11 +919,6 @@ begin
 
     until status_close <> XTAB;
 
-    // if status_close = 1 then
-    // begin
-    //     Result:=true;
-    //     FinishConfig;
-    // end;
     FinishConfig;
     WClose(win_sid);
 end;
@@ -1202,9 +926,6 @@ end;
 function menu_psg: Boolean;
 var
     win_psg: Byte;
-    // read_freq, read_stereo, read_envelope, read_volume: Byte;
-    // selected_freq, selected_stereo, selected_envelope, selected_volume: Byte;
-    // status_close: Byte;
 
 const  
     str_psg_freq: array[0..2] of string = ('2 MHz', '1 MHz', 'PHI2');
@@ -1212,21 +933,17 @@ const
     str_psg_envelope: array[0..1] of string = ('32 steps', '16 steps');
     str_psg_volume: array[0..3] of string = ('AY Log', 'YM2149 Log 1', 'YM2149 Log 2', 'Linear');
 
-    BUTTONS_POSX = 12; BUTTONS_POSY = 16;
-    STEREO_POSX = 2; STEREO_POSY = 2;
-    FREQ_POSX = 2; FREQ_POSY = 8;
-    ENVEL_POSX = 2; ENVEL_POSY = 13;
-    VOL_POSX = 14; VOL_POSY = 8;
+    BUTTONS_POSX = 8; BUTTONS_POSY = 17;
+    STEREO_POSX = 2; STEREO_POSY = 3;
+    FREQ_POSX = 2; FREQ_POSY = 9;
+    VOL_POSX = 14; VOL_POSY = 9;
+    ENVEL_POSX = 2; ENVEL_POSY = 14;
 
 begin
     Result:= false;
     status_close:= 0;
-    // selected_freq:= pmax_config.psg_freq;
-    // selected_stereo:= pmax_config.psg_stereo;
-    // selected_envelope:= pmax_config.psg_envelope;
-    // selected_volume:= pmax_config.psg_volume;
 
-    win_psg:=WOpen(3, 3, 32, 19, WOFF);
+    win_psg:=WOpen(4, 3, 32, 19, WOFF);
     WOrn(win_psg, WPTOP, WPLFT, ' PSG ');
     
 
@@ -1277,11 +994,6 @@ begin
 
     until status_close <> XTAB;
 
-    // if status_close = 1 then
-    // begin
-    //     Result:=true;
-    //     FinishConfig;
-    // end;
     FinishConfig;
     WClose(win_psg);
 end;
@@ -1291,7 +1003,7 @@ procedure menu_pokeymax;
 var
     win_pokeymax: Byte;
     selected: Byte;
-    // status_close: Boolean;
+
 const
     menu_pmax: array[0..2] of string = (' Flash  ', ' Verify ', ' Exit   ');
 
@@ -1333,7 +1045,7 @@ procedure menu_config;
 var
     win_config: Byte;
     selected: Byte;
-    // status_close: Boolean;
+
 const
     menu_cfg: array[0..4] of string = (' Mode   ', ' CORE   ', ' Pokey  ', ' SID    ', ' PSG    ');
 
@@ -1471,7 +1183,7 @@ begin
     {$ENDIF}
     win_details:=WOpen(0, 19, 40, 5, WOFF);
     WOrn(win_details, WPTOP, WPLFT, 'Details');
-    // WOrn(win_details, WPTOP,WPRGT, IntToStr(pmax_config.pagesize));
+    // WOrn(win_details, WPBOT, WPLFT, '[ENT]-Accept [TAB]-Skip [ESC]-Cancel');
 
     while not status_end do
     begin
