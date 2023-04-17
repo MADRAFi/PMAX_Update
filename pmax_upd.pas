@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v.0.50';
+    VERSION = 'PokeyMAX Update v0.5';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -470,6 +470,7 @@ begin
                         end
                         else begin
                             flash2:= PMAX_ReadFlash(val + i, 0);
+                            {$IFDEF NOT DEBUG}
                             if (buffer[i] <> flash2) then
                             begin
                                 read_input:= 2;
@@ -482,6 +483,7 @@ begin
                                 WPrint(win_progress, 18, 10, WOFF, HexStr(flash2, 5));
                                 break;
                             end;
+                            {$ENDIF}
                         end;
                     end;
                 end
@@ -1161,14 +1163,21 @@ begin
         WPrint(win_details, 28, 3, WOFF, 'Sample:');
 
         WPrint(win_details, 7, 1, WOFF, pmax_version);
+        {$IFDEF DEBUG}
+        WPrint(win_details, 8, 2, WOFF, 'Quad');
+        WPrint(win_details, 8, 3, WOFF, 'No');
+        WPrint(win_details, 23, 1, WOFF, 'Yes');
+        WPrint(win_details, 23, 2, WOFF, 'Yes');
+        WPrint(win_details, 23, 3, WOFF, 'Yes');
+        WPrint(win_details, 36, 3, WOFF, 'Yes');
+        {$ELSE}
         WPrint(win_details, 8, 2, WOFF, s_pokey);
         WPrint(win_details, 8, 3, WOFF, convert_bool(PMAX_isSIDPresent));
-        
         WPrint(win_details, 23, 1, WOFF, convert_bool(PMAX_isFlashPresent));
         WPrint(win_details, 23, 2, WOFF, convert_bool(PMAX_isPSGPresent));
         WPrint(win_details, 23, 3, WOFF, convert_bool(PMAX_isCovoxPresent));
-
         WPrint(win_details, 36, 3, WOFF, convert_bool(PMAX_isSamplePresent));
+        {$ENDIF}
     end
     else begin
         WPrint(win_details, WPCNT, 2, WON, ' PokeyMAX not found. ');
