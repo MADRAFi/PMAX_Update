@@ -74,6 +74,8 @@ begin
         i:=((val * 100) div max) + 1;
         // reused string variable
         file_version:= Concat(ByteToStr(i),'%');
+        // clear row to hide larger string
+        WPrint(win_progress, WPCNT, y, WOFF, '    ');
         WPrint(win_progress, WPCNT, y, WOFF, file_version);
         GProg(win_progress, 3, y + 1, i);
         WPrint(win_progress, 18, y + 2, WOFF, HexStr(val, 5));
