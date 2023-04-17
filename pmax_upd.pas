@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v0.5';
+    VERSION = 'PokeyMAX Update v1.0';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -376,7 +376,7 @@ begin
         // Drives combo
         read_input:= GCombo(win_progress, 2, 3, GEDIT, selected_drive, 8, list_drives);
         remember_input(selected_drive);
-        // if status_close = XESC then break;
+        if status_close = XESC then break;
         GCombo(win_progress, 2, 3, GDISP, selected_drive, 8, list_drives);
 
         // file
