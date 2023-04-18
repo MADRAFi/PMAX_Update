@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v1.0';
+    VERSION = 'PokeyMAX Update v0.6b';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -1021,7 +1021,7 @@ begin
         selected:=WMenu(win_pokeymax, 1, 1, GVERT, WOFF, selected, Length(menu_pmax), menu_pmax);
         case selected of
             1: begin
-                    if PMAX_present then
+                    if PMAX_present and PMAX_isFlashPresent then
                     begin
                         status_close:= XESC;
                         menu_flash(FLASH_CORE);
