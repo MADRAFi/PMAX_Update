@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v0.5';
+    VERSION = 'PokeyMAX Update v0.6b';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -74,6 +74,8 @@ begin
         i:=((val * 100) div max) + 1;
         // reused string variable
         file_version:= Concat(ByteToStr(i),'%');
+        // clear row to hide larger string
+        WPrint(win_progress, WPCNT, y, WOFF, '    ');
         WPrint(win_progress, WPCNT, y, WOFF, file_version);
         GProg(win_progress, 3, y + 1, i);
         WPrint(win_progress, 18, y + 2, WOFF, HexStr(val, 5));
@@ -376,7 +378,7 @@ begin
         // Drives combo
         read_input:= GCombo(win_progress, 2, 3, GEDIT, selected_drive, 8, list_drives);
         remember_input(selected_drive);
-        // if status_close = XESC then break;
+        if status_close = XESC then break;
         GCombo(win_progress, 2, 3, GDISP, selected_drive, 8, list_drives);
 
         // file
@@ -1019,7 +1021,7 @@ begin
         selected:=WMenu(win_pokeymax, 1, 1, GVERT, WOFF, selected, Length(menu_pmax), menu_pmax);
         case selected of
             1: begin
-                    if PMAX_present then
+                    if PMAX_present and PMAX_isFlashPresent then
                     begin
                         status_close:= XESC;
                         menu_flash(FLASH_CORE);
