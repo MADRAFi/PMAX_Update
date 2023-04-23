@@ -782,13 +782,13 @@ begin
         read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 1, GEDIT, pmax_config.core_out2);
         remember_input(pmax_config.core_out2);
         if status_close = XESC then break;
-        GCheck(win_core, GTIA_POSX, OUT_POSY + 1, GDISP, pmax_config.core_out2);
+        GCheck(win_core, OUT_POSX, OUT_POSY + 1, GDISP, pmax_config.core_out2);
 
         // output 3
         read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 3, GEDIT, pmax_config.core_out3);
         remember_input(pmax_config.core_out3);
         if status_close = XESC then break;
-        GCheck(win_core, GTIA_POSX, OUT_POSY + 3, GDISP, pmax_config.core_out3);
+        GCheck(win_core, OUT_POSX, OUT_POSY + 3, GDISP, pmax_config.core_out3);
 
         // output 4
         read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 4, GEDIT, pmax_config.core_out4);
