@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v0.6b';
+    VERSION = 'PokeyMAX Update v0.7b';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -98,6 +98,7 @@ begin
     end;
     WPrint(win_progress, WPCNT, baW.bH[win_progress] - 2, WON, '[  OK  ]');
     WaitKCX(WOFF);
+    status_close:= XESC;
     // WClose(win_progress);
 end;
 
@@ -781,13 +782,13 @@ begin
         read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 1, GEDIT, pmax_config.core_out2);
         remember_input(pmax_config.core_out2);
         if status_close = XESC then break;
-        GCheck(win_core, GTIA_POSX, OUT_POSY + 1, GDISP, pmax_config.core_out2);
+        GCheck(win_core, OUT_POSX, OUT_POSY + 1, GDISP, pmax_config.core_out2);
 
         // output 3
         read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 3, GEDIT, pmax_config.core_out3);
         remember_input(pmax_config.core_out3);
         if status_close = XESC then break;
-        GCheck(win_core, GTIA_POSX, OUT_POSY + 3, GDISP, pmax_config.core_out3);
+        GCheck(win_core, OUT_POSX, OUT_POSY + 3, GDISP, pmax_config.core_out3);
 
         // output 4
         read_input:= GCheck(win_core, OUT_POSX, OUT_POSY + 4, GEDIT, pmax_config.core_out4);
@@ -1023,15 +1024,12 @@ begin
             1: begin
                     if PMAX_present and PMAX_isFlashPresent then
                     begin
-                        status_close:= XESC;
                         menu_flash(FLASH_CORE);
                     end;
                end;
             2:  begin
                     if PMAX_present then
                     begin
-                        status_close:= XESC;
-                        // menu_verify;
                         menu_flash(FLASH_VERIFY);
                     end;
                 end;
@@ -1076,8 +1074,8 @@ begin
                             PMAX_WriteConfig;
                             if PMAX_isFlashPresent then
                             begin
-                                status_close:= XESC;
                                 FlashSaveConfig;
+                                status_close:= XESC;
                             end;
                         end;
                     end;
