@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v0.7b';
+    VERSION = 'PokeyMAX Update v1.0';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
