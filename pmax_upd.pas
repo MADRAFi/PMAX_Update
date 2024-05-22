@@ -72,6 +72,7 @@ begin
     if (val mod 10) = 0 then
     begin
         i:=((val * 100) div max) + 1;
+        if i > 100 then i:=100;
         // reused string variable
         file_version:= Concat(ByteToStr(i),'%');
         // clear row to hide larger string
