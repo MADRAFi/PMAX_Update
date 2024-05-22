@@ -72,6 +72,7 @@ begin
     if (val mod 10) = 0 then
     begin
         i:=((val * 100) div max) + 1;
+        if i > 100 then i:=100;
         // reused string variable
         file_version:= Concat(ByteToStr(i),'%');
         // clear row to hide larger string
@@ -498,7 +499,7 @@ begin
                 end;
                 if read_input <> 0 then break;
                 Inc(val, BYTESTOREAD);
-            until (val >= pmax_config.max_address) or (IOResult = 3);
+            until (val > pmax_config.max_address) or (IOResult = 3);
             close(f);
             if mode = FLASH_CORE then
             begin
