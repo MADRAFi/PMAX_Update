@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v1.1';
+    VERSION = 'PokeyMAX Update v1.0';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -498,7 +498,7 @@ begin
                 end;
                 if read_input <> 0 then break;
                 Inc(val, BYTESTOREAD);
-            until (val >= pmax_config.max_address) or (IOResult = 3);
+            until (val > pmax_config.max_address) or (IOResult = 3);
             close(f);
             if mode = FLASH_CORE then
             begin
