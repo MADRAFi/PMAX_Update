@@ -9,7 +9,7 @@ program pmax_upd;
 uses atari, crt, sysutils, stringUtils, a8defines, a8defwin, a8libwin, a8libgadg, a8libmenu, a8libmisc, pm_detect, pm_config, pm_flash;
 
 const
-    VERSION = 'PokeyMAX Update v1.0';
+    VERSION = 'PokeyMAX Update v1.2';
     BYTESTOREAD = 256;
     SCREEN_ADDRESS = $BC40;
     DL_BLANK8 = %01110000; // 8 blank lines
@@ -46,6 +46,7 @@ var
     pmax_version: String[8];
     file_version: String[8];
     core_file: String[15];
+    p: String[4];
     f: File;
 
 function convert_bool(value: Boolean): String;
@@ -73,11 +74,10 @@ begin
     begin
         i:=((val * 100) div max) + 1;
         if i > 100 then i:=100;
-        // reused string variable
-        file_version:= Concat(ByteToStr(i),'%');
+        p:= Concat(ByteToStr(i),'%');
         // clear row to hide larger string
         WPrint(win_progress, WPCNT, y, WOFF, '    ');
-        WPrint(win_progress, WPCNT, y, WOFF, file_version);
+        WPrint(win_progress, WPCNT, y, WOFF, p);
         GProg(win_progress, 3, y + 1, i);
         WPrint(win_progress, 18, y + 2, WOFF, HexStr(val, 5));
         atract:= 0;
@@ -499,7 +499,7 @@ begin
                 end;
                 if read_input <> 0 then break;
                 Inc(val, BYTESTOREAD);
-            until (val > pmax_config.max_address) or (IOResult = 3);
+            until (val >= pmax_config.max_address) or (IOResult = 3);
             close(f);
             if mode = FLASH_CORE then
             begin
